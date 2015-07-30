@@ -1,9 +1,15 @@
-package uk.ac.soton.ldanalytics.sparql2sql.parse;
+package uk.ac.soton.ldanalytics.sparql2sql.model;
 
 import java.util.List;
 
 import com.hp.hpl.jena.graph.Node;
 import com.hp.hpl.jena.graph.Triple;
+import com.hp.hpl.jena.rdf.model.Model;
+import com.hp.hpl.jena.rdf.model.Property;
+import com.hp.hpl.jena.rdf.model.RDFNode;
+import com.hp.hpl.jena.rdf.model.Resource;
+import com.hp.hpl.jena.rdf.model.Statement;
+import com.hp.hpl.jena.rdf.model.StmtIterator;
 import com.hp.hpl.jena.sparql.algebra.OpVisitor;
 import com.hp.hpl.jena.sparql.algebra.op.OpAssign;
 import com.hp.hpl.jena.sparql.algebra.op.OpBGP;
@@ -41,16 +47,43 @@ import com.hp.hpl.jena.sparql.algebra.op.OpTriple;
 import com.hp.hpl.jena.sparql.algebra.op.OpUnion;
 
 public class SparqlOpVisitor implements OpVisitor {
+	
+	RdfTableMapping mapping = null;
+	
+	public void useMapping(RdfTableMapping mapping) {
+		this.mapping = mapping;
+	}
 
-	public void visit(OpBGP arg0) {
-		List<Triple> p = arg0.getPattern().getList();
-		for(Triple t:p) {
-			Node subject = t.getSubject();
-			if(subject.isVariable()) {
-				System.out.println(subject.getName());
+	public void visit(OpBGP bgp) {
+		//result is a list of table and its columns to select and the variables they are tied to
+		for(Model model:mapping.getMapping()) {
+			List<Triple> patterns = bgp.getPattern().getList();
+			for(Triple t:patterns) {
+				Node subject = t.getSubject();
+				Node predicate = t.getPredicate();
+				Node object = t.getObject();
+				Resource s = subject.isVariable() ? null : model.asRDFNode(subject).asResource();
+				Property p = predicate.isVariable() ? null : model.createProperty(predicate.getURI());
+				RDFNode o = object.isVariable() ? null : model.asRDFNode(object); //TODO: as of now it doesnt make sense to specify a literal object
+				StmtIterator stmts = model.listStatements(s, p, o);
+				System.out.println("pattern:"+t);
+				while(stmts.hasNext()) {
+					Statement stmt = stmts.next();
+					checkSubject(t,patterns);
+					System.out.println(stmt);
+				}
 			}
 		}
-		
+	}
+
+	private void checkSubject(Triple originalTriple, List<Triple> patterns) {
+		for(Triple t:patterns) {
+			if(!t.matches(originalTriple)) {
+				if(t.subjectMatches(originalTriple.getSubject())) {
+					System.out.println("match subject:"+t);
+				}
+			}
+		}
 	}
 
 	public void visit(OpQuadPattern arg0) {

@@ -1,0 +1,14 @@
+<http://iot.soton.ac.uk/smarthome/environment#obs> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://purl.oclc.org/NET/iot#WeatherObservation>.
+	<http://iot.soton.ac.uk/smarthome/environment#obs> <http://purl.oclc.org/NET/ssnx/ssn#observationResult> <http://iot.soton.ac.uk/smarthome/environment#snout>.
+	<http://iot.soton.ac.uk/smarthome/environment#obs> <http://purl.oclc.org/NET/ssnx/ssn#observationSamplingTime> <http://iot.soton.ac.uk/smarthome/environment#time>.
+	<http://iot.soton.ac.uk/smarthome/environment#obs> <http://purl.oclc.org/NET/ssnx/ssn#observedBy> <http://iot.soton.ac.uk/smarthome/sensor#environmental1>.
+<http://iot.soton.ac.uk/smarthome/environment#time> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2006/time#Instant>.
+	<http://iot.soton.ac.uk/smarthome/environment#time> <http://www.w3.org/2006/time#inXSDDateTime> "environment.TimestampUTC".
+<http://iot.soton.ac.uk/smarthome/environment#snout> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://purl.oclc.org/NET/iot#WeatherSensorOutput>.
+	<http://iot.soton.ac.uk/smarthome/environment#snout> <http://purl.oclc.org/NET/ssnx/ssn#hasValue> <http://iot.soton.ac.uk/smarthome/environment#intempval>.
+	<http://iot.soton.ac.uk/smarthome/environment#snout> <http://purl.oclc.org/NET/ssnx/ssn#hasValue> <http://iot.soton.ac.uk/smarthome/environment#extempval>.
+	<http://iot.soton.ac.uk/smarthome/environment#snout> <http://purl.oclc.org/NET/ssnx/ssn#isProducedBy> <http://iot.soton.ac.uk/smarthome/sensor#environmental1>.
+<http://iot.soton.ac.uk/smarthome/environment#intempval> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://purl.oclc.org/NET/iot#InternalTemperatureValue>.
+	<http://iot.soton.ac.uk/smarthome/environment#intempval> <http://purl.oclc.org/NET/iot#hasQuantityValue> "environment.insideTemp".
+<http://iot.soton.ac.uk/smarthome/environment#extempval> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://purl.oclc.org/NET/iot#ExternalTemperatureValue>.
+	<http://iot.soton.ac.uk/smarthome/environment#extempval> <http://purl.oclc.org/NET/iot#hasQuantityValue> "environment.outsideTemp".

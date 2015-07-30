@@ -1,6 +1,7 @@
 package uk.ac.soton.ldanalytics.sparql2sql;
 
-import uk.ac.soton.ldanalytics.sparql2sql.parse.SparqlOpVisitor;
+import uk.ac.soton.ldanalytics.sparql2sql.model.RdfTableMapping;
+import uk.ac.soton.ldanalytics.sparql2sql.model.SparqlOpVisitor;
 
 import com.hp.hpl.jena.query.Query;
 import com.hp.hpl.jena.query.QueryFactory;
@@ -24,15 +25,20 @@ public class test {
 				   "  	ssn:observedBy iotsn:environmental1;\r\n" + 
 				   "    ssn:observationResult ?snout.\r\n" + 
 				   "  ?snout ssn:hasValue ?obsval.\r\n" + 
-				   "  ?obsval a iot:internal;\r\n" + 
+				   "  ?obsval a iot:InternalTemperatureValue;\r\n" + 
 				   "    iot:hasQuantityValue ?val.\r\n" + 
-				   "  FILTER (?date > \"2012-07-20\"^^xsd:dateTime && ?date < \"2012-07-21\"^^xsd:dateTime)\r\n" + 
+				   "  FILTER (?date > \"2012-07-20T00:00:00\"^^xsd:dateTime && ?date < \"2012-07-21T00:00:00\"^^xsd:dateTime)\r\n" + 
 				   "} GROUP BY (hours(xsd:dateTime(?date)) as ?hours)";
 
 		Query query = QueryFactory.create(queryStr);
 		Op op = Algebra.compile(query);
 		System.out.println(op);
+		
+		RdfTableMapping mapping = new RdfTableMapping();
+		mapping.loadMapping("mapping/smarthome_environment.nt");
+		
 		SparqlOpVisitor v = new SparqlOpVisitor();
+		v.useMapping(mapping);
 		OpWalker.walk(op,v);
 		
 	}
