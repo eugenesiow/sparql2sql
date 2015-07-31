@@ -1,6 +1,7 @@
 package uk.ac.soton.ldanalytics.sparql2sql.model;
 
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 
 import com.hp.hpl.jena.graph.Node;
@@ -9,8 +10,6 @@ import com.hp.hpl.jena.rdf.model.Model;
 import com.hp.hpl.jena.rdf.model.Property;
 import com.hp.hpl.jena.rdf.model.RDFNode;
 import com.hp.hpl.jena.rdf.model.Resource;
-import com.hp.hpl.jena.rdf.model.Selector;
-import com.hp.hpl.jena.rdf.model.SimpleSelector;
 import com.hp.hpl.jena.rdf.model.Statement;
 import com.hp.hpl.jena.rdf.model.StmtIterator;
 import com.hp.hpl.jena.sparql.algebra.OpVisitor;
@@ -48,14 +47,21 @@ import com.hp.hpl.jena.sparql.algebra.op.OpTable;
 import com.hp.hpl.jena.sparql.algebra.op.OpTopN;
 import com.hp.hpl.jena.sparql.algebra.op.OpTriple;
 import com.hp.hpl.jena.sparql.algebra.op.OpUnion;
-import com.hp.hpl.jena.vocabulary.VCARD;
+import com.hp.hpl.jena.sparql.expr.Expr;
+import com.hp.hpl.jena.sparql.expr.ExprWalker;
 
 public class SparqlOpVisitor implements OpVisitor {
 	
 	RdfTableMapping mapping = null;
 	List<Node> eliminated = null;
-	int lowestCount = 100;
 	List<Resource> traversed = new ArrayList<Resource>();
+	List<Resource> blacklist = new ArrayList<Resource>();
+	List<SelectedNode> selectedNodes = new ArrayList<SelectedNode>();
+	
+	String selectClause = "SELECT ";
+	String fromClause = "FROM ";
+	String whereClause = "WHERE ";
+	String groupClause = "";	
 	
 	public SparqlOpVisitor() {
 		eliminated = new ArrayList<Node>();
@@ -81,7 +87,20 @@ public class SparqlOpVisitor implements OpVisitor {
 						checkSubject(t,patterns,model,stmt);
 						System.out.println(stmt);
 						//add statements if not eliminated
+						if(!blacklist.contains(stmt.getSubject())) {
+							SelectedNode node = new SelectedNode();
+							node.setStatement(stmt);
+							node.setBinding(t);
+							selectedNodes.add(node);
+						}
 					}
+				}
+			}
+			
+			System.out.println("-----------\n\n"+selectedNodes.size());
+			for(SelectedNode n:selectedNodes) {
+				if(n.isLeafMap()) {
+					System.out.println(n.getVar() + ":" + n.getTable() + "." + n.getColumn());
 				}
 			}
 		}
@@ -131,15 +150,15 @@ public class SparqlOpVisitor implements OpVisitor {
 //			calculateBranchNode(stmt.getSubject(),validSubjects,model);
 //		}
 			
-		//backward elimination recursion
-		eliminateR(stmt.getSubject(),validSubjects,model, 0, stmt.getSubject(), patterns, t.getSubject());
+		//backward elimination recursion and mark forward elimination/blacklisting
+		eliminateR(stmt.getSubject(),validSubjects,model, 0, stmt.getSubject(), patterns, t.getSubject(), null);
 		
 		//forward elimination
 		//add subject to list and also all connected objects if not branch
 	}
 	
 	private int eliminateR(Resource subject, List<Resource> validSubjects,
-			Model model, int count, Resource parent, List<Triple> patterns, Node var) {
+			Model model, int count, Resource parent, List<Triple> patterns, Node var, List<Resource> path) {
 		System.out.println(parent+"->"+subject);
 		traversed.add(subject);
 		
@@ -161,6 +180,10 @@ public class SparqlOpVisitor implements OpVisitor {
 			
 			if(stmts!=null) {
 				while(stmts.hasNext()) {
+					if(path==null) { //create new path for each branch out
+						path = new ArrayList<Resource>();
+					}
+					
 					Statement stmt = stmts.next();
 					Resource nextNode = null;
 					if(t.subjectMatches(var)) {
@@ -175,9 +198,13 @@ public class SparqlOpVisitor implements OpVisitor {
 		//			System.out.println(o.isLiteral() + ":" + o + ":" + subject + ":" + stmt.getPredicate());
 					if(!traversed.contains(nextNode)) {
 		//				System.out.println(o);
-						int tempResult = eliminateR(nextNode.asResource(),validSubjects,model,count++,subject,patterns,nextVar);
+						int tempResult = eliminateR(nextNode.asResource(),validSubjects,model,count++,subject,patterns,nextVar,path);
+						//on the wind down add the branch
+						path.add(nextNode);
 						if(tempResult>0) {
-							if(count==tempResult) {
+							if(count==(tempResult+1)/2) {
+								//clear the path down the line
+								path.clear();
 								System.out.println("\n\n"+nextNode);
 							} else {
 								return tempResult;
@@ -188,7 +215,26 @@ public class SparqlOpVisitor implements OpVisitor {
 			}
 		}
 		
+		if(subject.equals(parent)) { //reached the top, eliminate all on this path
+			path.add(subject);
+			eliminateNodes(path);
+		}
+		
 		return 0;
+	}
+	
+	private void eliminateNodes(List<Resource> path) {		
+		//eliminate nodes in list	
+		Iterator<SelectedNode> i = selectedNodes.iterator();
+		while (i.hasNext()) {
+		   SelectedNode node = i.next(); // must be called before you can call i.remove()
+		   if(path.contains(node.getSubject())) {
+			   i.remove();
+			}
+		}
+		
+		//blaclist/forward elimination
+		blacklist.addAll(path);
 	}
 
 //	private Resource calculateBranchNode(Resource invalidNode, List<Resource> validSubjects, Model model) {
@@ -277,9 +323,15 @@ public class SparqlOpVisitor implements OpVisitor {
 		
 	}
 
-	public void visit(OpFilter arg0) {
-		System.out.println("Filter");
+	public void visit(OpFilter filters) {
+		System.out.println("Filter");		
 		
+		for(Expr filter:filters.getExprs().getList()) {
+			SparqlExprVisitor v = new SparqlExprVisitor();
+			ExprWalker.walk(v,filter);
+			v.finishVisit();
+			whereClause += v.getExpression(); 
+		}
 	}
 
 	public void visit(OpGraph arg0) {
