@@ -1,0 +1,14 @@
+_:1a <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://purl.oclc.org/NET/iot#WeatherObservation>.
+	_:1a <http://purl.oclc.org/NET/ssnx/ssn#observationResult> _:1c.
+	_:1a <http://purl.oclc.org/NET/ssnx/ssn#observationSamplingTime> _:1b.
+	_:1a <http://purl.oclc.org/NET/ssnx/ssn#observedBy> <http://iot.soton.ac.uk/smarthome/sensor#environmental1>.
+_:1b <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2006/time#Instant>.
+	_:1b <http://www.w3.org/2006/time#inXSDDateTime> "environment.TimestampUTC".
+_:1c <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://purl.oclc.org/NET/iot#WeatherSensorOutput>.
+	_:1c <http://purl.oclc.org/NET/ssnx/ssn#hasValue> _:1d.
+	_:1c <http://purl.oclc.org/NET/ssnx/ssn#hasValue> _:1e.
+	_:1c <http://purl.oclc.org/NET/ssnx/ssn#isProducedBy> <http://iot.soton.ac.uk/smarthome/sensor#environmental1>.
+_:1d <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://purl.oclc.org/NET/iot#InternalTemperatureValue>.
+	_:1d <http://purl.oclc.org/NET/iot#hasQuantityValue> "environment.insideTemp".
+_:1e <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://purl.oclc.org/NET/iot#ExternalTemperatureValue>.
+	_:1e <http://purl.oclc.org/NET/iot#hasQuantityValue> "environment.outsideTemp".
