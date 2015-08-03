@@ -57,6 +57,7 @@ public class SelectedNode {
 	public void setBinding(Triple t) {
 		pattern = t;
 		Node object = pattern.getObject();
+		//TODO: in general this should be when its not a variable
 		if(object.isLiteral()) {
 			isLeafValue = true;
 			if(stmt!=null)

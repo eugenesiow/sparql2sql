@@ -36,6 +36,8 @@ public class test {
 		
 		RdfTableMapping mapping = new RdfTableMapping();
 		mapping.loadMapping("mapping/smarthome_environment.nt");
+		mapping.loadMapping("mapping/smarthome_meter.nt");
+		mapping.loadMapping("mapping/smarthome_sensors.nt");
 		
 		SparqlOpVisitor v = new SparqlOpVisitor();
 		v.useMapping(mapping);

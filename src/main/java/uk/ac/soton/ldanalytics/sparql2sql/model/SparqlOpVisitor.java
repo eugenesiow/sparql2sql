@@ -117,7 +117,7 @@ public class SparqlOpVisitor implements OpVisitor {
 					whereClause += modifier + n.getWherePart();
 				} else if(n.isLeafMap()) {
 //					System.out.println(n.getVar() + ":" + n.getTable() + "." + n.getColumn());
-					varMapping.put(n.getVar(), n.getColumn());
+					varMapping.put(n.getVar(), n.getTable() + "." + n.getColumn());
 					tableList.add(n.getTable());
 				}
 			}
@@ -133,6 +133,7 @@ public class SparqlOpVisitor implements OpVisitor {
 		} else if(object.isVariable()) {
 			o = null;
 		} else {
+			//TODO: should also check that the corresponding object is not a resource that has a mapping
 			o = model.asRDFNode(object);
 		}
 		return model.listStatements(s, p, o);
