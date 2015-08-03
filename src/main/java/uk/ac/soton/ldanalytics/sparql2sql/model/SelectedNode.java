@@ -1,5 +1,6 @@
 package uk.ac.soton.ldanalytics.sparql2sql.model;
 
+import com.hp.hpl.jena.graph.Node;
 import com.hp.hpl.jena.graph.Triple;
 import com.hp.hpl.jena.rdf.model.RDFNode;
 import com.hp.hpl.jena.rdf.model.Resource;
@@ -9,8 +10,10 @@ public class SelectedNode {
 	Statement stmt = null;
 	Triple pattern = null;
 	Boolean isLeafMap = false;
+	Boolean isLeafValue = false;
 	String tableName = "";
 	String columnName = "";
+	String wherePart = "";
 	
 	public Resource getSubject() {
 		Resource subject = null;
@@ -23,12 +26,20 @@ public class SelectedNode {
 		return isLeafMap;
 	}
 	
+	public Boolean isLeafValue() {
+		return isLeafValue;
+	}
+	
 	public String getTable() {
 		return tableName;
 	}
 	
 	public String getColumn() {
 		return columnName;
+	}
+	
+	public String getWherePart() {
+		return wherePart;
 	}
 	
 	public void setStatement(Statement stmt) {
@@ -45,6 +56,12 @@ public class SelectedNode {
 	}
 	public void setBinding(Triple t) {
 		pattern = t;
+		Node object = pattern.getObject();
+		if(object.isLiteral()) {
+			isLeafValue = true;
+			if(stmt!=null)
+				wherePart = columnName + "=" + object.toString() + " ";
+		}
 	}
 	
 	public String getVar() {

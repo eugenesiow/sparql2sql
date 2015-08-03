@@ -32,7 +32,7 @@ public class test {
 
 		Query query = QueryFactory.create(queryStr);
 		Op op = Algebra.compile(query);
-		System.out.println(op);
+//		System.out.println(op);
 		
 		RdfTableMapping mapping = new RdfTableMapping();
 		mapping.loadMapping("mapping/smarthome_environment.nt");
@@ -40,6 +40,7 @@ public class test {
 		SparqlOpVisitor v = new SparqlOpVisitor();
 		v.useMapping(mapping);
 		OpWalker.walk(op,v);
+		System.out.println(v.getSQL());
 		
 	}
 	

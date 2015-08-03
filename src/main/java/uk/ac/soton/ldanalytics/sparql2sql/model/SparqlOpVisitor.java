@@ -1,8 +1,12 @@
 package uk.ac.soton.ldanalytics.sparql2sql.model;
 
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 import com.hp.hpl.jena.graph.Node;
 import com.hp.hpl.jena.graph.Triple;
@@ -47,7 +51,10 @@ import com.hp.hpl.jena.sparql.algebra.op.OpTable;
 import com.hp.hpl.jena.sparql.algebra.op.OpTopN;
 import com.hp.hpl.jena.sparql.algebra.op.OpTriple;
 import com.hp.hpl.jena.sparql.algebra.op.OpUnion;
+import com.hp.hpl.jena.sparql.core.Var;
+import com.hp.hpl.jena.sparql.core.VarExprList;
 import com.hp.hpl.jena.sparql.expr.Expr;
+import com.hp.hpl.jena.sparql.expr.ExprAggregator;
 import com.hp.hpl.jena.sparql.expr.ExprWalker;
 
 public class SparqlOpVisitor implements OpVisitor {
@@ -57,11 +64,14 @@ public class SparqlOpVisitor implements OpVisitor {
 	List<Resource> traversed = new ArrayList<Resource>();
 	List<Resource> blacklist = new ArrayList<Resource>();
 	List<SelectedNode> selectedNodes = new ArrayList<SelectedNode>();
+	Map<String,String> varMapping = new HashMap<String,String>();
+	Map<String,String> aliases = new HashMap<String,String>();
+	Set<String> tableList = new HashSet<String>();
 	
 	String selectClause = "SELECT ";
 	String fromClause = "FROM ";
 	String whereClause = "WHERE ";
-	String groupClause = "";	
+	String groupClause = "GROUP BY ";	
 	
 	public SparqlOpVisitor() {
 		eliminated = new ArrayList<Node>();
@@ -81,11 +91,11 @@ public class SparqlOpVisitor implements OpVisitor {
 					Node predicate = t.getPredicate();
 					Node object = t.getObject();
 					StmtIterator stmts = getStatements(subject,predicate,object,model);
-					System.out.println("pattern:"+t);
+//					System.out.println("pattern:"+t);
 					while(stmts.hasNext()) {
 						Statement stmt = stmts.next();
 						checkSubject(t,patterns,model,stmt);
-						System.out.println(stmt);
+//						System.out.println(stmt);
 						//add statements if not eliminated
 						if(!blacklist.contains(stmt.getSubject())) {
 							SelectedNode node = new SelectedNode();
@@ -97,10 +107,18 @@ public class SparqlOpVisitor implements OpVisitor {
 				}
 			}
 			
-			System.out.println("-----------\n\n"+selectedNodes.size());
+//			System.out.println("-----------\n\n"+selectedNodes.size());
 			for(SelectedNode n:selectedNodes) {
-				if(n.isLeafMap()) {
-					System.out.println(n.getVar() + ":" + n.getTable() + "." + n.getColumn());
+				if(n.isLeafValue()) {
+					String modifier = "";
+					if(!whereClause.equals("WHERE ")) {
+						modifier = " AND ";
+					}
+					whereClause += modifier + n.getWherePart();
+				} else if(n.isLeafMap()) {
+//					System.out.println(n.getVar() + ":" + n.getTable() + "." + n.getColumn());
+					varMapping.put(n.getVar(), n.getColumn());
+					tableList.add(n.getTable());
 				}
 			}
 		}
@@ -109,7 +127,14 @@ public class SparqlOpVisitor implements OpVisitor {
 	private StmtIterator getStatements(Node subject, Node predicate, Node object, Model model) {
 		Resource s = subject.isVariable() ? null : model.asRDFNode(subject).asResource();
 		Property p = predicate.isVariable() ? null : model.createProperty(predicate.getURI());
-		RDFNode o = object.isVariable() ? null : model.asRDFNode(object); //TODO: as of now it doesnt make sense to specify a literal object
+		RDFNode o = null;
+		if(object.isLiteral()) {
+			o = null;
+		} else if(object.isVariable()) {
+			o = null;
+		} else {
+			o = model.asRDFNode(object);
+		}
 		return model.listStatements(s, p, o);
 	}
 
@@ -124,11 +149,11 @@ public class SparqlOpVisitor implements OpVisitor {
 					if(!stmts.hasNext()) {
 						//eliminate
 						eliminate(t,stmt, model, patterns);
-						System.out.println("no statement:"+t);
+//						System.out.println("no statement:"+t);
 						eliminated.add(t.getSubject());
 						break;
 					}
-					System.out.println("matches statement:"+t);
+//					System.out.println("matches statement:"+t);
 				}
 			}
 		}
@@ -159,7 +184,7 @@ public class SparqlOpVisitor implements OpVisitor {
 	
 	private int eliminateR(Resource subject, List<Resource> validSubjects,
 			Model model, int count, Resource parent, List<Triple> patterns, Node var, List<Resource> path) {
-		System.out.println(parent+"->"+subject);
+//		System.out.println(parent+"->"+subject);
 		traversed.add(subject);
 		
 		if(validSubjects.contains(subject)) {
@@ -205,7 +230,7 @@ public class SparqlOpVisitor implements OpVisitor {
 							if(count==(tempResult+1)/2) {
 								//clear the path down the line
 								path.clear();
-								System.out.println("\n\n"+nextNode);
+//								System.out.println("\n\n"+nextNode);
 							} else {
 								return tempResult;
 							}
@@ -324,14 +349,21 @@ public class SparqlOpVisitor implements OpVisitor {
 	}
 
 	public void visit(OpFilter filters) {
-		System.out.println("Filter");		
+//		System.out.println("Filter");		
 		
 		for(Expr filter:filters.getExprs().getList()) {
-			SparqlExprVisitor v = new SparqlExprVisitor();
+			SparqlFilterExprVisitor v = new SparqlFilterExprVisitor();
+			v.setMapping(varMapping);
 			ExprWalker.walk(v,filter);
 			v.finishVisit();
-			whereClause += v.getExpression(); 
+			String modifier = "";
+			if(!whereClause.equals("WHERE ")) {
+				modifier = " AND ";
+			}
+			whereClause += modifier + v.getExpression(); 
 		}
+		
+//		System.out.println(whereClause);
 	}
 
 	public void visit(OpGraph arg0) {
@@ -360,8 +392,15 @@ public class SparqlOpVisitor implements OpVisitor {
 	}
 
 	public void visit(OpExtend arg0) {
-		// TODO Auto-generated method stub
-		
+//		System.out.println("extend");
+		VarExprList vars = arg0.getVarExprList();
+		for(Var var:vars.getVars()) {
+			String originalKey = vars.getExpr(var).getVarName();
+			if(aliases.containsKey(originalKey)) {
+				String val = aliases.remove(originalKey);
+				aliases.put(var.getName(), val);
+			}
+		}
 	}
 
 	public void visit(OpJoin arg0) {
@@ -405,7 +444,7 @@ public class SparqlOpVisitor implements OpVisitor {
 	}
 
 	public void visit(OpExt arg0) {
-		// TODO Auto-generated method stub
+		
 		
 	}
 
@@ -420,8 +459,25 @@ public class SparqlOpVisitor implements OpVisitor {
 	}
 
 	public void visit(OpProject arg0) {
-		// TODO Auto-generated method stub
-		
+//		System.out.println("project");
+		int count=0;
+		for(Var var:arg0.getVars()) {
+			if(count++>0) {
+				selectClause += " , ";
+			}
+			if(aliases.containsKey(var.getName())) {
+				selectClause += aliases.get(var.getName()) + " AS " + var.getName();
+			} else if(varMapping.containsKey(var.getName())){
+				String rdmsName = varMapping.get(var.getName());
+				selectClause += rdmsName;
+				if(!rdmsName.equals(var.getName())) {
+					selectClause += " AS " + var.getName();
+				}
+			} else {
+				count--;
+			}
+		}
+//		System.out.println(selectClause);
 	}
 
 	public void visit(OpReduced arg0) {
@@ -439,14 +495,63 @@ public class SparqlOpVisitor implements OpVisitor {
 		
 	}
 
-	public void visit(OpGroup arg0) {
-		System.out.println("group");
-		
+	public void visit(OpGroup group) {
+//		System.out.println("group");
+		VarExprList vars = group.getGroupVars();
+		Map<Var,Expr> exprMap = vars.getExprs();
+		int count = 0;
+		for(Var var:vars.getVars()) {
+			Expr expr = exprMap.get(var);
+			SparqlGroupExprVisitor v = new SparqlGroupExprVisitor();
+			v.setMapping(varMapping);
+			ExprWalker.walk(v, expr);
+			if(count++>0) {
+				groupClause += " , ";
+			}
+			if(!v.getExpression().equals("")) {
+				groupClause += v.getExpression();
+				aliases.put(var.getName(), v.getExpression());
+			} else {
+				groupClause += var.getName();
+			} 
+		}
+//		System.out.println(groupClause);
+		for(ExprAggregator agg:group.getAggregators()) {
+			SparqlGroupExprVisitor v = new SparqlGroupExprVisitor();
+			v.setMapping(varMapping);
+			ExprWalker.walk(v, agg);
+			aliases.put(v.getAggKey(),v.getAggVal());
+		}
 	}
 
 	public void visit(OpTopN arg0) {
 		
 		
+	}
+	
+	public String getSQL() {
+		int count = 0;
+		for(String table:tableList) {
+			if(count++>0) {
+				fromClause += " , ";
+			}
+			fromClause += table;
+		}
+		
+		if(selectClause.equals("SELECT ")) {
+			return "";
+		} else if(fromClause.equals("FROM ")) {
+			return "";
+		} else if(whereClause.equals("WHERE ")) {
+			whereClause = "";
+		} else if(groupClause.equals("GROUP BY ")) {
+			groupClause = "";
+		}
+		
+		return selectClause + " " +
+				fromClause + " " +
+				whereClause + " " +
+				groupClause + " ";
 	}
 
 }
