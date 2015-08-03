@@ -1,5 +1,8 @@
 package uk.ac.soton.ldanalytics.sparql2sql.model;
 
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
 import com.hp.hpl.jena.graph.Node;
 import com.hp.hpl.jena.graph.Triple;
 import com.hp.hpl.jena.rdf.model.RDFNode;
@@ -52,8 +55,26 @@ public class SelectedNode {
 				tableName = parts[0];
 				columnName = parts[1];
 			}
+		} else if(object.isResource()) {
+			checkIfResourceIsLeafMap(object.asResource().getURI());
 		}
 	}
+	
+	private void checkIfResourceIsLeafMap(String uri) {
+		if(uri!=null && uri.contains("{")) {
+
+			Matcher m = Pattern.compile("\\{(.*?)\\}").matcher(uri);
+			while(m.find()) {
+				String parts[] = m.group(1).split("\\.");
+				if(parts.length>1) {
+					isLeafMap = true;
+					tableName = parts[0];
+					columnName = parts[1];
+				}
+			}
+		}
+	}
+	
 	public void setBinding(Triple t) {
 		pattern = t;
 		Node object = pattern.getObject();

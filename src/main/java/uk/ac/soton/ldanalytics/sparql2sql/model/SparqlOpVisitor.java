@@ -68,7 +68,9 @@ public class SparqlOpVisitor implements OpVisitor {
 	Map<String,String> aliases = new HashMap<String,String>();
 	Set<String> tableList = new HashSet<String>();
 	
+	String previousSelect = "";
 	String selectClause = "SELECT ";
+	String projections = "";
 	String fromClause = "FROM ";
 	String whereClause = "WHERE ";
 	String groupClause = "GROUP BY ";	
@@ -84,6 +86,7 @@ public class SparqlOpVisitor implements OpVisitor {
 	public void visit(OpBGP bgp) {
 		//result is a list of table and its columns to select and the variables they are tied to
 		for(Model model:mapping.getMapping()) {
+			System.out.println("--------------------START MAPPING----------------------");
 			List<Triple> patterns = bgp.getPattern().getList();
 			for(Triple t:patterns) {
 				Node subject = t.getSubject(); 
@@ -95,7 +98,7 @@ public class SparqlOpVisitor implements OpVisitor {
 					while(stmts.hasNext()) {
 						Statement stmt = stmts.next();
 						checkSubject(t,patterns,model,stmt);
-//						System.out.println(stmt);
+						System.out.println(stmt);
 						//add statements if not eliminated
 						if(!blacklist.contains(stmt.getSubject())) {
 							SelectedNode node = new SelectedNode();
@@ -107,7 +110,7 @@ public class SparqlOpVisitor implements OpVisitor {
 				}
 			}
 			
-//			System.out.println("-----------\n\n"+selectedNodes.size());
+			System.out.println("-----------");
 			for(SelectedNode n:selectedNodes) {
 				if(n.isLeafValue()) {
 					String modifier = "";
@@ -116,11 +119,17 @@ public class SparqlOpVisitor implements OpVisitor {
 					}
 					whereClause += modifier + n.getWherePart();
 				} else if(n.isLeafMap()) {
-//					System.out.println(n.getVar() + ":" + n.getTable() + "." + n.getColumn());
+					System.out.println(n.getVar() + ":" + n.getTable() + "." + n.getColumn());
 					varMapping.put(n.getVar(), n.getTable() + "." + n.getColumn());
 					tableList.add(n.getTable());
 				}
 			}
+			
+			System.out.println("--------------------END MAPPING----------------------");
+			//clean up
+			blacklist.clear();
+			traversed.clear();
+			eliminated.clear();
 		}
 	}
 
@@ -350,7 +359,7 @@ public class SparqlOpVisitor implements OpVisitor {
 	}
 
 	public void visit(OpFilter filters) {
-//		System.out.println("Filter");		
+//		System.out.println("Filter");	
 		
 		for(Expr filter:filters.getExprs().getList()) {
 			SparqlFilterExprVisitor v = new SparqlFilterExprVisitor();
@@ -460,25 +469,49 @@ public class SparqlOpVisitor implements OpVisitor {
 	}
 
 	public void visit(OpProject arg0) {
+		//TODO: do any joins required
+		if(tableList.size()>1) {
+			System.out.println("joins required");
+		}
+		
 //		System.out.println("project");
+		if(!previousSelect.equals("")) {//previous projection
+			if(!whereClause.equals("WHERE ")) {
+				whereClause += " AND ";
+			}
+			whereClause += projections + " IN (" + previousSelect + ") ";
+		}
+		
 		int count=0;
 		for(Var var:arg0.getVars()) {
 			if(count++>0) {
 				selectClause += " , ";
+				projections += " , ";
 			}
 			if(aliases.containsKey(var.getName())) {
-				selectClause += aliases.get(var.getName()) + " AS " + var.getName();
+				String colName = aliases.remove(var.getName());
+				selectClause += colName + " AS " + var.getName();
+				projections += var.getName();
 			} else if(varMapping.containsKey(var.getName())){
 				String rdmsName = varMapping.get(var.getName());
 				selectClause += rdmsName;
 				if(!rdmsName.equals(var.getName())) {
 					selectClause += " AS " + var.getName();
 				}
+				projections += var.getName();
 			} else {
-				count--;
+				selectClause += var.getName();
+				projections += var.getName();
+//				count--;
 			}
 		}
 //		System.out.println(selectClause);
+		previousSelect = formatSQL();
+		//clear clauses
+		selectClause = "SELECT ";
+		fromClause = "FROM ";
+		whereClause = "WHERE ";
+		groupClause = "GROUP BY ";
 	}
 
 	public void visit(OpReduced arg0) {
@@ -530,7 +563,7 @@ public class SparqlOpVisitor implements OpVisitor {
 		
 	}
 	
-	public String getSQL() {
+	private String formatSQL() {
 		int count = 0;
 		for(String table:tableList) {
 			if(count++>0) {
@@ -553,6 +586,10 @@ public class SparqlOpVisitor implements OpVisitor {
 				fromClause + " " +
 				whereClause + " " +
 				groupClause + " ";
+	}
+	
+	public String getSQL() {
+		return previousSelect;
 	}
 
 }

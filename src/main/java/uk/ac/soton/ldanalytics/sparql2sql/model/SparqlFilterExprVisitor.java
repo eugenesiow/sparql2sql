@@ -54,7 +54,7 @@ public class SparqlFilterExprVisitor implements ExprVisitor {
 
 	public void visit(ExprFunction2 arg0) {
 		if(functionList.contains(arg0.getOpName())) {
-			currentPart += FormatUtil.mapVar(arg0.getArg1().getVarName(),varMapping) + arg0.getOpName() + "'"+FormatUtil.parseNodeValue(arg0.getArg2().getConstant())+ "'";
+			currentPart += FormatUtil.mapVar(arg0.getArg1().getVarName(),varMapping) + arg0.getOpName() +FormatUtil.parseNodeValue(arg0.getArg2().getConstant());
 			exprParts.add(currentPart);
 			currentPart = "";
 		}
