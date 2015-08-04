@@ -562,8 +562,7 @@ public class SparqlOpVisitor implements OpVisitor {
 	}
 
 	public void visit(OpSlice arg0) {
-		// TODO Auto-generated method stub
-		
+		previousSelect += "LIMIT " + arg0.getLength();
 	}
 
 	public void visit(OpGroup group) {
