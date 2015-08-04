@@ -2,6 +2,7 @@ package uk.ac.soton.ldanalytics.sparql2sql;
 
 import uk.ac.soton.ldanalytics.sparql2sql.model.RdfTableMapping;
 import uk.ac.soton.ldanalytics.sparql2sql.model.SparqlOpVisitor;
+import uk.ac.soton.ldanalytics.sparql2sql.util.SQLFormatter;
 
 import com.hp.hpl.jena.query.Query;
 import com.hp.hpl.jena.query.QueryFactory;
@@ -142,7 +143,8 @@ public class test {
 		SparqlOpVisitor v = new SparqlOpVisitor();
 		v.useMapping(mapping);
 		OpWalker.walk(op,v);
-		System.out.println(v.getSQL());
+		SQLFormatter formatter = new SQLFormatter();
+		System.out.println(formatter.format(v.getSQL()));
 		
 	}
 	
