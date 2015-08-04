@@ -30,6 +30,18 @@ public class test {
 				   "  FILTER (?date > \"2012-07-20T00:00:00\"^^xsd:dateTime && ?date < \"2012-07-21T00:00:00\"^^xsd:dateTime)\r\n" + 
 				   "} GROUP BY (hours(xsd:dateTime(?date)) as ?hours)";
 		
+//		String queryStr = "PREFIX  xsd:  <http://www.w3.org/2001/XMLSchema#>\r\n" + 
+//				"PREFIX  iotsn: <http://iot.soton.ac.uk/smarthome/sensor#>\r\n" + 
+//				"PREFIX  time: <http://www.w3.org/2006/time#>\r\n" + 
+//				"PREFIX  ssn:  <http://purl.oclc.org/NET/ssnx/ssn#>\r\n" + 
+//				"PREFIX  iot:  <http://purl.oclc.org/NET/iot#>\r\n" + 
+//				"\r\n" + 
+//				"SELECT ?sensor\r\n" + 
+//				"  WHERE\r\n" + 
+//				"  {\r\n" +
+//				"    ?sensor ssn:onPlatform <http://iot.soton.ac.uk/smarthome/platform#kitchen>\r\n" + 
+//				"  }";
+		
 //		String queryStr = "PREFIX ssn: <http://purl.oclc.org/NET/ssnx/ssn#>\n" + 
 //				"PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>\n" + 
 //				"PREFIX time: <http://www.w3.org/2006/time#>\n" + 

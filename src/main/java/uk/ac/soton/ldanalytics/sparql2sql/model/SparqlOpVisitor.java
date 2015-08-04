@@ -8,6 +8,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import uk.ac.soton.ldanalytics.sparql2sql.util.FormatUtil;
+
 import com.hp.hpl.jena.graph.Node;
 import com.hp.hpl.jena.graph.Triple;
 import com.hp.hpl.jena.rdf.model.Model;
@@ -93,10 +95,8 @@ public class SparqlOpVisitor implements OpVisitor {
 				if(!eliminated.contains(subject)) { //check if subject has been eliminated 
 					Node predicate = t.getPredicate();
 					Node object = t.getObject();
-					StmtIterator stmts = getStatements(subject,predicate,object,model);
 //					System.out.println("pattern:"+t);
-					while(stmts.hasNext()) {
-						Statement stmt = stmts.next();
+					for(Statement stmt:getStatements(subject,predicate,object,model)) {
 						checkSubject(t,patterns,model,stmt);
 						System.out.println(stmt);
 						//add statements if not eliminated
@@ -123,6 +123,11 @@ public class SparqlOpVisitor implements OpVisitor {
 					varMapping.put(n.getVar(), n.getTable() + "." + n.getColumn());
 					tableList.add(n.getTable());
 				}
+				if(n.isSubjectLeafMap()) {
+					System.out.println(n.getSubjectVar() + ":" + n.getSubjectTable() + "." + n.getSubjectColumn());
+					varMapping.put(n.getSubjectVar(), n.getSubjectTable() + "." + n.getSubjectColumn());
+					tableList.add(n.getSubjectTable());
+				}
 			}
 			
 			System.out.println("--------------------END MAPPING----------------------");
@@ -133,19 +138,54 @@ public class SparqlOpVisitor implements OpVisitor {
 		}
 	}
 
-	private StmtIterator getStatements(Node subject, Node predicate, Node object, Model model) {
-		Resource s = subject.isVariable() ? null : model.asRDFNode(subject).asResource();
+	private List<Statement> getStatements(Node subject, Node predicate, Node object, Model model) {
+		Resource s = subject.isBlank() ? model.asRDFNode(subject).asResource():null;
 		Property p = predicate.isVariable() ? null : model.createProperty(predicate.getURI());
-		RDFNode o = null;
-		if(object.isLiteral()) {
-			o = null;
-		} else if(object.isVariable()) {
-			o = null;
-		} else {
-			//TODO: should also check that the corresponding object is not a resource that has a mapping
-			o = model.asRDFNode(object);
+		RDFNode o = object.isBlank() ? model.asRDFNode(object) : null;
+//		if(object.isLiteral()) {
+//			o = null;
+//		} else if(object.isVariable()) {
+//			o = null;
+//		} else {
+//			//TODO: should also check that the corresponding object is not a resource that has a mapping
+//			o = model.asRDFNode(object);
+//		}
+		StmtIterator stmts = model.listStatements(s, p, o);
+		List<Statement> stmtList = new ArrayList<Statement>();
+		while(stmts.hasNext()) {
+			Boolean addStatement = true;
+			Statement stmt = stmts.next();
+			if(!subject.isVariable()) {
+				if(!stmt.getSubject().isAnon()) {
+					String uri = stmt.getSubject().getURI();
+					if(uri.contains("{")) {
+						addStatement = FormatUtil.compareUriPattern(subject.getURI(),uri);
+					} else {
+						if(!uri.equals(subject.getURI()))
+							addStatement = false;
+					}
+				}
+			}
+			if(!object.isVariable()) {
+				RDFNode stmtObj = stmt.getObject();
+				if(object.isURI()) {
+					if(!stmtObj.isResource()) {
+						addStatement = false;
+					} else {
+						String uri = stmtObj.asResource().getURI();
+						if(uri.contains("{")) {
+							addStatement = FormatUtil.compareUriPattern(object.getURI(),uri);
+						} else {
+							if(!uri.equals(object.getURI()))
+								addStatement = false;
+						}
+					}
+				}
+			}
+			if(addStatement)
+				stmtList.add(stmt);
 		}
-		return model.listStatements(s, p, o);
+		return stmtList;
 	}
 
 	private void checkSubject(Triple originalTriple, List<Triple> patterns, Model model, Statement stmt) {
@@ -155,8 +195,7 @@ public class SparqlOpVisitor implements OpVisitor {
 					Node subject = stmt.getSubject().asNode();
 					Node predicate = t.getPredicate();
 					Node object = t.getObject();
-					StmtIterator stmts = getStatements(subject,predicate,object,model);
-					if(!stmts.hasNext()) {
+					if(getStatements(subject,predicate,object,model).isEmpty()) {
 						//eliminate
 						eliminate(t,stmt, model, patterns);
 //						System.out.println("no statement:"+t);
@@ -174,10 +213,8 @@ public class SparqlOpVisitor implements OpVisitor {
 		Node subject = t.getSubject();
 		Node predicate = t.getPredicate();
 		Node object = t.getObject();
-		StmtIterator stmts = getStatements(subject,predicate,object,model);
 		List<Resource> validSubjects = new ArrayList<Resource>();
-		while(stmts.hasNext()) {
-			Statement correctStmt = stmts.next();
+		for(Statement correctStmt:getStatements(subject,predicate,object,model)) {
 			validSubjects.add(correctStmt.getSubject());
 		}
 //		Boolean hasBranch = validSubjects.size() > 0;
@@ -572,13 +609,16 @@ public class SparqlOpVisitor implements OpVisitor {
 			fromClause += table;
 		}
 		
-		if(selectClause.equals("SELECT ")) {
+		if(selectClause.trim().equals("SELECT")) {
 			return "";
-		} else if(fromClause.equals("FROM ")) {
+		} 
+		if(fromClause.trim().equals("FROM")) {
 			return "";
-		} else if(whereClause.equals("WHERE ")) {
+		}
+		if(whereClause.trim().equals("WHERE")) {
 			whereClause = "";
-		} else if(groupClause.equals("GROUP BY ")) {
+		}
+		if(groupClause.trim().equals("GROUP BY")) {
 			groupClause = "";
 		}
 		

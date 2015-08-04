@@ -54,6 +54,16 @@ public class FormatUtil {
 			mappedName = varMapping.get(varName);
 		return mappedName;
 	}
+
+	public static Boolean compareUriPattern(String uri, String pattern) {
+		String stripPattern = pattern.replaceAll("\\{.*?}", "\\|\\|");
+		String[] splitPattern = stripPattern.split("\\|\\|");
+		for(String part:splitPattern) {
+			if(!uri.contains(part))
+				return false;
+		}
+		return true;
+	}
 	
 	
 }

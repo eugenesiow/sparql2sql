@@ -13,9 +13,12 @@ public class SelectedNode {
 	Statement stmt = null;
 	Triple pattern = null;
 	Boolean isLeafMap = false;
+	Boolean isSubjectLeafMap = false;
 	Boolean isLeafValue = false;
 	String tableName = "";
 	String columnName = "";
+	String subjectTableName = "";
+	String subjectColumnName = "";
 	String wherePart = "";
 	
 	public Resource getSubject() {
@@ -29,6 +32,10 @@ public class SelectedNode {
 		return isLeafMap;
 	}
 	
+	public Boolean isSubjectLeafMap() {
+		return isSubjectLeafMap;
+	}
+	
 	public Boolean isLeafValue() {
 		return isLeafValue;
 	}
@@ -39,6 +46,14 @@ public class SelectedNode {
 	
 	public String getColumn() {
 		return columnName;
+	}
+	
+	public String getSubjectTable() {
+		return subjectTableName;
+	}
+	
+	public String getSubjectColumn() {
+		return subjectColumnName;
 	}
 	
 	public String getWherePart() {
@@ -56,20 +71,30 @@ public class SelectedNode {
 				columnName = parts[1];
 			}
 		} else if(object.isResource()) {
-			checkIfResourceIsLeafMap(object.asResource().getURI());
+			checkIfResourceIsLeafMap(object.asResource().getURI(),true);
+		}
+		
+		Resource subject = stmt.getSubject();
+		if(subject.isURIResource()) {
+			checkIfResourceIsLeafMap(subject.getURI(),false);
 		}
 	}
 	
-	private void checkIfResourceIsLeafMap(String uri) {
+	private void checkIfResourceIsLeafMap(String uri, Boolean isObject) {
 		if(uri!=null && uri.contains("{")) {
-
 			Matcher m = Pattern.compile("\\{(.*?)\\}").matcher(uri);
 			while(m.find()) {
 				String parts[] = m.group(1).split("\\.");
 				if(parts.length>1) {
-					isLeafMap = true;
-					tableName = parts[0];
-					columnName = parts[1];
+					if(isObject) {
+						isLeafMap = true;
+						tableName = parts[0];
+						columnName = parts[1];
+					} else {
+						isSubjectLeafMap = true;
+						subjectTableName = parts[0];
+						subjectColumnName = parts[1];
+					}
 				}
 			}
 		}
@@ -90,6 +115,14 @@ public class SelectedNode {
 		String var = "";
 		if(pattern.getObject().isVariable()) {
 			var = pattern.getObject().getName();
+		}
+		return var;
+	}
+	
+	public String getSubjectVar() {
+		String var = "";
+		if(pattern.getSubject().isVariable()) {
+			var = pattern.getSubject().getName();
 		}
 		return var;
 	}
