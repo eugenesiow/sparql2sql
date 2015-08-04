@@ -6,6 +6,7 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 
 import uk.ac.soton.ldanalytics.sparql2sql.util.FormatUtil;
@@ -142,14 +143,7 @@ public class SparqlOpVisitor implements OpVisitor {
 		Resource s = subject.isBlank() ? model.asRDFNode(subject).asResource():null;
 		Property p = predicate.isVariable() ? null : model.createProperty(predicate.getURI());
 		RDFNode o = object.isBlank() ? model.asRDFNode(object) : null;
-//		if(object.isLiteral()) {
-//			o = null;
-//		} else if(object.isVariable()) {
-//			o = null;
-//		} else {
-//			//TODO: should also check that the corresponding object is not a resource that has a mapping
-//			o = model.asRDFNode(object);
-//		}
+
 		StmtIterator stmts = model.listStatements(s, p, o);
 		List<Statement> stmtList = new ArrayList<Statement>();
 		while(stmts.hasNext()) {
@@ -508,8 +502,46 @@ public class SparqlOpVisitor implements OpVisitor {
 	public void visit(OpProject arg0) {
 		//TODO: do any joins required
 		if(tableList.size()>1) {
-			System.out.println("joins required");
+//			System.out.println("joins required");
+			Map<String, Set<String>> joinMap = new HashMap<String,Set<String>>(); 
+			for(SelectedNode node:selectedNodes) {
+				if(node.isLeafMap) {
+					String var = node.getVar();
+					Set<String> cols = joinMap.get(var);
+					if(cols==null) {
+						cols = new HashSet<String>();
+					}
+					cols.add(node.getTable()+"."+node.getColumn());
+					joinMap.put(var, cols);
+				}
+				if(node.isSubjectLeafMap) {
+					String var = node.getSubjectVar();
+					Set<String> cols = joinMap.get(var);
+					if(cols==null) {
+						cols = new HashSet<String>();
+					}
+					cols.add(node.getSubjectTable()+"."+node.getSubjectColumn());
+					joinMap.put(var, cols);
+				}
+			}
+			
+			String joinExpression = "";
+			for(Entry<String,Set<String>> joinItem:joinMap.entrySet()) {
+				if(joinItem.getValue().size()>1) {
+					int count = 0;
+					for(String column:joinItem.getValue()) {
+						if(count++>0) {
+							joinExpression += "=";
+						}
+						joinExpression += column;
+					}
+				}
+			}
+			if(!whereClause.trim().equals("WHERE"))
+				whereClause += " AND ";
+			whereClause += " " + joinExpression + " ";
 		}
+		selectedNodes.clear(); //clear the selected node list from any bgps below this projection
 		
 //		System.out.println("project");
 		if(!previousSelect.equals("")) {//previous projection
@@ -530,11 +562,12 @@ public class SparqlOpVisitor implements OpVisitor {
 				selectClause += colName + " AS " + var.getName();
 				projections += var.getName();
 			} else if(varMapping.containsKey(var.getName())){
-				String rdmsName = varMapping.get(var.getName());
+				String rdmsName = varMapping.remove(var.getName());
 				selectClause += rdmsName;
 				if(!rdmsName.equals(var.getName())) {
 					selectClause += " AS " + var.getName();
 				}
+				varMapping.put(var.getName(), var.getName());
 				projections += var.getName();
 			} else {
 				selectClause += var.getName();
@@ -582,10 +615,10 @@ public class SparqlOpVisitor implements OpVisitor {
 				groupClause += v.getExpression();
 				aliases.put(var.getName(), v.getExpression());
 			} else {
-				groupClause += var.getName();
+				groupClause += FormatUtil.mapVar(var.getName(),varMapping);
 			} 
 		}
-//		System.out.println(groupClause);
+//		System.out.println("group:"+groupClause);
 		for(ExprAggregator agg:group.getAggregators()) {
 			SparqlGroupExprVisitor v = new SparqlGroupExprVisitor();
 			v.setMapping(varMapping);

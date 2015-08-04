@@ -21,8 +21,12 @@ public class FormatUtil {
 		String expression = "";
 		if(expr.isFunction()) {
 			ExprFunction func = expr.getFunction();
-			if(func.getFunctionIRI()!=null)
-				expression = mapVar(func.getArg(1).getVarName(),varMapping);
+			if(func.getFunctionIRI()!=null) {
+				if(func.getFunctionIRI().equals("http://www.w3.org/2001/XMLSchema#date"))
+					expression = "CAST(" + mapVar(func.getArg(1).getVarName(),varMapping) + " AS DATE)";
+				else
+					expression = mapVar(func.getArg(1).getVarName(),varMapping);
+			}
 			else {
 				String innerExpression = "";
 				if(func.getArg(1).isFunction()) {

@@ -33,7 +33,7 @@ public class SparqlGroupExprVisitor implements ExprVisitor {
 	}
 
 	public void visit(ExprFunction0 arg0) {
-		System.out.println(arg0);
+//		System.out.println(arg0);
 	}
 
 	public void visit(ExprFunction1 func) {
@@ -50,9 +50,11 @@ public class SparqlGroupExprVisitor implements ExprVisitor {
 
 	}
 
-	public void visit(ExprFunctionN arg0) {
-		// TODO Auto-generated method stub
+	public void visit(ExprFunctionN func) {
 //		System.out.println(arg0);
+		if(func.isFunction()) {
+			expression = FormatUtil.processExprType(func,varMapping) ;
+		}
 	}
 
 	public void visit(ExprFunctionOp arg0) {
