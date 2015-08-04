@@ -68,6 +68,15 @@ public class FormatUtil {
 		}
 		return true;
 	}
+
+	public static String handleExpr(Expr expr, Map<String, String> varMapping) {
+		if(expr.isVariable()) {
+			return FormatUtil.mapVar(expr.getVarName(),varMapping);
+		} else if(expr.isConstant()) {
+			return parseNodeValue(expr.getConstant());
+		}
+		return expr.toString();
+	}
 	
 	
 }

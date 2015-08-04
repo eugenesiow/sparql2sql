@@ -115,7 +115,7 @@ public class SparqlOpVisitor implements OpVisitor {
 			for(SelectedNode n:selectedNodes) {
 				if(n.isLeafValue()) {
 					String modifier = "";
-					if(!whereClause.equals("WHERE ")) {
+					if(!whereClause.trim().equals("WHERE")) {
 						modifier = " AND ";
 					}
 					whereClause += modifier + n.getWherePart();
@@ -545,7 +545,7 @@ public class SparqlOpVisitor implements OpVisitor {
 		
 //		System.out.println("project");
 		if(!previousSelect.equals("")) {//previous projection
-			if(!whereClause.equals("WHERE ")) {
+			if(!whereClause.trim().equals("WHERE")) {
 				whereClause += " AND ";
 			}
 			whereClause += projections + " IN (" + previousSelect + ") ";

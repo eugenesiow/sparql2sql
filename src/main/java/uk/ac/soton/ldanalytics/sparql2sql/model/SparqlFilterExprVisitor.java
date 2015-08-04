@@ -7,6 +7,7 @@ import java.util.Map;
 
 import uk.ac.soton.ldanalytics.sparql2sql.util.FormatUtil;
 
+import com.hp.hpl.jena.sparql.expr.Expr;
 import com.hp.hpl.jena.sparql.expr.ExprAggregator;
 import com.hp.hpl.jena.sparql.expr.ExprFunction0;
 import com.hp.hpl.jena.sparql.expr.ExprFunction1;
@@ -52,15 +53,18 @@ public class SparqlFilterExprVisitor implements ExprVisitor {
 	public void visit(ExprFunction1 arg0) {
 	}
 
-	public void visit(ExprFunction2 arg0) {
-		if(functionList.contains(arg0.getOpName())) {
-			currentPart += FormatUtil.mapVar(arg0.getArg1().getVarName(),varMapping) + arg0.getOpName() +FormatUtil.parseNodeValue(arg0.getArg2().getConstant());
+	public void visit(ExprFunction2 args) {
+		if(functionList.contains(args.getOpName())) {
+//			System.out.println(args);
+			Expr leftSide = args.getArg1();
+			Expr rightSide = args.getArg2();
+			currentPart += FormatUtil.handleExpr(leftSide,varMapping) + args.getOpName() + FormatUtil.handleExpr(rightSide, varMapping);
 			exprParts.add(currentPart);
 			currentPart = "";
 		}
-		else if(arg0.getOpName().equals("&&")) 
+		else if(args.getOpName().equals("&&")) 
 			combinePart = " AND ";
-		else if(arg0.getOpName().equals("&&")) 
+		else if(args.getOpName().equals("&&")) 
 			combinePart = " OR ";
 	}
 
