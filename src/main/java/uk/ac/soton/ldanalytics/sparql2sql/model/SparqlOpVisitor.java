@@ -63,23 +63,26 @@ import com.hp.hpl.jena.sparql.expr.ExprWalker;
 public class SparqlOpVisitor implements OpVisitor {
 	
 	RdfTableMapping mapping = null;
-	List<Node> eliminated = null;
+	List<Node> eliminated = new ArrayList<Node>();
 	List<Resource> traversed = new ArrayList<Resource>();
 	List<Resource> blacklist = new ArrayList<Resource>();
 	List<SelectedNode> selectedNodes = new ArrayList<SelectedNode>();
 	Map<String,String> varMapping = new HashMap<String,String>();
 	Map<String,String> aliases = new HashMap<String,String>();
 	Set<String> tableList = new HashSet<String>();
+	List<String> previousSelects = new ArrayList<String>();
 	
-	String previousSelect = "";
+//	String previousSelect = "";
 	String selectClause = "SELECT ";
 	String projections = "";
 	String fromClause = "FROM ";
 	String whereClause = "WHERE ";
 	String groupClause = "GROUP BY ";	
 	
+	Boolean bgpStarted = false;
+	
 	public SparqlOpVisitor() {
-		eliminated = new ArrayList<Node>();
+
 	}
 	
 	public void useMapping(RdfTableMapping mapping) {
@@ -87,6 +90,7 @@ public class SparqlOpVisitor implements OpVisitor {
 	}
 
 	public void visit(OpBGP bgp) {
+		bgpStarted = true;
 		//result is a list of table and its columns to select and the variables they are tied to
 		for(Model model:mapping.getMapping()) {
 			System.out.println("--------------------START MAPPING----------------------");
@@ -500,7 +504,8 @@ public class SparqlOpVisitor implements OpVisitor {
 	}
 
 	public void visit(OpProject arg0) {
-		//TODO: do any joins required
+		
+		
 		if(tableList.size()>1) {
 //			System.out.println("joins required");
 			Map<String, Set<String>> joinMap = new HashMap<String,Set<String>>(); 
@@ -553,16 +558,16 @@ public class SparqlOpVisitor implements OpVisitor {
 		tableList.clear();
 		
 //		System.out.println("project");
-		if(!previousSelect.equals("")) {//previous projection
-//			if(!whereClause.trim().equals("WHERE")) {
-//				whereClause += " AND ";
+//		if(!previousSelect.equals("")) {//previous projection
+////			if(!whereClause.trim().equals("WHERE")) {
+////				whereClause += " AND ";
+////			}
+////			whereClause += projections + " IN (" + previousSelect + ") ";
+//			if(!fromClause.trim().equals("FROM")) {
+//				fromClause += " , ";
 //			}
-//			whereClause += projections + " IN (" + previousSelect + ") ";
-			if(!fromClause.trim().equals("FROM")) {
-				fromClause += " , ";
-			}
-			fromClause += " (" + previousSelect + ") ";
-		}
+//			fromClause += " (" + previousSelect + ") ";
+//		}
 		
 		count=0;
 		for(Var var:arg0.getVars()) {
@@ -589,12 +594,27 @@ public class SparqlOpVisitor implements OpVisitor {
 			}
 		}
 //		System.out.println(selectClause);
-		previousSelect = formatSQL();
+//		previousSelect = formatSQL();
+		if(bgpStarted==true) {
+			previousSelects.add(formatSQL());
+		} else {
+			for(String sel:previousSelects) {
+				if(!fromClause.trim().equals("FROM")) {
+					fromClause += " , ";
+				}
+				fromClause += " (" + sel + ") ";
+			}
+			previousSelects.clear();
+			previousSelects.add(formatSQL());
+		}
+		
 		//clear clauses
 		selectClause = "SELECT ";
 		fromClause = "FROM ";
 		whereClause = "WHERE ";
 		groupClause = "GROUP BY ";
+		
+		bgpStarted = false;
 	}
 
 	public void visit(OpReduced arg0) {
@@ -608,7 +628,9 @@ public class SparqlOpVisitor implements OpVisitor {
 	}
 
 	public void visit(OpSlice arg0) {
+		String previousSelect = previousSelects.remove(previousSelects.size()-1);
 		previousSelect += "LIMIT " + arg0.getLength();
+		previousSelects.add(previousSelect);
 	}
 
 	public void visit(OpGroup group) {
@@ -666,7 +688,10 @@ public class SparqlOpVisitor implements OpVisitor {
 	}
 	
 	public String getSQL() {
-		return previousSelect;
+		if(previousSelects.size()>0) {
+			return previousSelects.get(0);
+		}
+		return null;
 	}
 
 }
