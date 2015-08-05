@@ -3,6 +3,7 @@ package uk.ac.soton.ldanalytics.sparql2sql.util;
 import java.util.HashMap;
 import java.util.Map;
 
+import com.hp.hpl.jena.graph.Node;
 import com.hp.hpl.jena.sparql.expr.Expr;
 import com.hp.hpl.jena.sparql.expr.ExprFunction;
 import com.hp.hpl.jena.sparql.expr.NodeValue;
@@ -46,6 +47,7 @@ public class FormatUtil {
 		String inputSymbol = symbol.toLowerCase();
 		Map<String, String> symbolMap = new HashMap<String,String>();
 		symbolMap.put("hours", "HOUR");
+		symbolMap.put("sample", "MAX");
 		if(symbolMap.containsKey(inputSymbol)) {
 			inputSymbol = symbolMap.get(inputSymbol);
 		}
@@ -76,6 +78,10 @@ public class FormatUtil {
 			return parseNodeValue(expr.getConstant());
 		}
 		return expr.toString();
+	}
+
+	public static String processLiteral(Node object) {
+		return object.getLiteral().getValue().toString();
 	}
 	
 	

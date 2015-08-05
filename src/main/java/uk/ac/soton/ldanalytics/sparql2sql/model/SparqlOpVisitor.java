@@ -122,7 +122,7 @@ public class SparqlOpVisitor implements OpVisitor {
 					if(!whereClause.trim().equals("WHERE")) {
 						modifier = " AND ";
 					}
-					whereClause += modifier + n.getWherePart();
+					whereClause += modifier + n.getWherePart(varMapping);
 				} else if(n.isLeafMap()) {
 					System.out.println(n.getVar() + ":" + n.getTable() + "." + n.getColumn());
 					varMapping.put(n.getVar(), n.getTable() + "." + n.getColumn());
@@ -444,6 +444,10 @@ public class SparqlOpVisitor implements OpVisitor {
 			if(aliases.containsKey(originalKey)) {
 				String val = aliases.remove(originalKey);
 				aliases.put(var.getName(), val);
+			} 
+			if(varMapping.containsKey(originalKey)) {
+				String val = varMapping.remove(originalKey);
+				varMapping.put(var.getName(), val);
 			}
 		}
 	}
@@ -619,7 +623,7 @@ public class SparqlOpVisitor implements OpVisitor {
 
 	public void visit(OpReduced arg0) {
 		// TODO Auto-generated method stub
-		
+		 
 	}
 
 	public void visit(OpDistinct arg0) {

@@ -1,7 +1,10 @@
 package uk.ac.soton.ldanalytics.sparql2sql.model;
 
+import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
+import uk.ac.soton.ldanalytics.sparql2sql.util.FormatUtil;
 
 import com.hp.hpl.jena.graph.Node;
 import com.hp.hpl.jena.graph.Triple;
@@ -19,7 +22,6 @@ public class SelectedNode {
 	String columnName = "";
 	String subjectTableName = "";
 	String subjectColumnName = "";
-	String wherePart = "";
 	
 	public Resource getSubject() {
 		Resource subject = null;
@@ -56,7 +58,11 @@ public class SelectedNode {
 		return subjectColumnName;
 	}
 	
-	public String getWherePart() {
+	public String getWherePart(Map<String, String> varMapping) {
+		String wherePart = "";
+		Node object = pattern.getObject();
+		if(stmt!=null)
+			wherePart = FormatUtil.mapVar(columnName, varMapping) + "=" + FormatUtil.processLiteral(object) + " ";
 		return wherePart;
 	}
 	
@@ -102,12 +108,9 @@ public class SelectedNode {
 	
 	public void setBinding(Triple t) {
 		pattern = t;
-		Node object = pattern.getObject();
 		//TODO: in general this should be when its not a variable
-		if(object.isLiteral()) {
+		if(t.getObject().isLiteral()) {
 			isLeafValue = true;
-			if(stmt!=null)
-				wherePart = columnName + "=" + object.toString() + " ";
 		}
 	}
 	
