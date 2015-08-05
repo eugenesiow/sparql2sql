@@ -543,15 +543,28 @@ public class SparqlOpVisitor implements OpVisitor {
 		}
 		selectedNodes.clear(); //clear the selected node list from any bgps below this projection
 		
+		int count = 0; //add from tables
+		for(String table:tableList) {
+			if(count++>0) {
+				fromClause += " , ";
+			}
+			fromClause += table;
+		}
+		tableList.clear();
+		
 //		System.out.println("project");
 		if(!previousSelect.equals("")) {//previous projection
-			if(!whereClause.trim().equals("WHERE")) {
-				whereClause += " AND ";
+//			if(!whereClause.trim().equals("WHERE")) {
+//				whereClause += " AND ";
+//			}
+//			whereClause += projections + " IN (" + previousSelect + ") ";
+			if(!fromClause.trim().equals("FROM")) {
+				fromClause += " , ";
 			}
-			whereClause += projections + " IN (" + previousSelect + ") ";
+			fromClause += " (" + previousSelect + ") ";
 		}
 		
-		int count=0;
+		count=0;
 		for(Var var:arg0.getVars()) {
 			if(count++>0) {
 				selectClause += " , ";
@@ -632,15 +645,7 @@ public class SparqlOpVisitor implements OpVisitor {
 		
 	}
 	
-	private String formatSQL() {
-		int count = 0;
-		for(String table:tableList) {
-			if(count++>0) {
-				fromClause += " , ";
-			}
-			fromClause += table;
-		}
-		
+	private String formatSQL() {		
 		if(selectClause.trim().equals("SELECT")) {
 			return "";
 		} 
