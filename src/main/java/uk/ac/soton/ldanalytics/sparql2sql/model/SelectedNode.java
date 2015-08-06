@@ -58,11 +58,11 @@ public class SelectedNode {
 		return subjectColumnName;
 	}
 	
-	public String getWherePart(Map<String, String> varMapping) {
+	public String getWherePart() {
 		String wherePart = "";
 		Node object = pattern.getObject();
 		if(stmt!=null)
-			wherePart = FormatUtil.mapVar(columnName, varMapping) + "=" + FormatUtil.processLiteral(object) + " ";
+			wherePart = tableName + "." + columnName + "=" + FormatUtil.processLiteral(object) + " ";
 		return wherePart;
 	}
 	

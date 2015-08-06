@@ -122,7 +122,7 @@ public class SparqlOpVisitor implements OpVisitor {
 					if(!whereClause.trim().equals("WHERE")) {
 						modifier = " AND ";
 					}
-					whereClause += modifier + n.getWherePart(varMapping);
+					whereClause += modifier + n.getWherePart();
 				} else if(n.isLeafMap()) {
 					System.out.println(n.getVar() + ":" + n.getTable() + "." + n.getColumn());
 					varMapping.put(n.getVar(), n.getTable() + "." + n.getColumn());

@@ -130,20 +130,24 @@ public class test {
 				"    FILTER(?motionplatform = ?meterplatform && ?motionhours = ?meterhours && ?motiondate = ?meterdate)\r\n" + 
 				"  }";
 
-		Query query = QueryFactory.create(queryStr);
-		Op op = Algebra.compile(query);
-		System.out.println(op);
-		
 		RdfTableMapping mapping = new RdfTableMapping();
 		mapping.loadMapping("mapping/smarthome_environment.nt");
 		mapping.loadMapping("mapping/smarthome_meter.nt");
 		mapping.loadMapping("mapping/smarthome_sensors.nt");
 		mapping.loadMapping("mapping/smarthome_motion.nt");
 		
+		long startTime = System.currentTimeMillis();
+		Query query = QueryFactory.create(queryStr);
+		Op op = Algebra.compile(query);
+		System.out.println(op);
+		
 		SparqlOpVisitor v = new SparqlOpVisitor();
 		v.useMapping(mapping);
 		OpWalker.walk(op,v);
 		SQLFormatter formatter = new SQLFormatter();
+		
+		System.out.println(System.currentTimeMillis() - startTime);
+		
 		System.out.println(formatter.format(v.getSQL()));
 		
 	}
