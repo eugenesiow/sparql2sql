@@ -97,7 +97,7 @@ public class SparqlOpVisitor implements OpVisitor {
 			List<Triple> patterns = bgp.getPattern().getList();
 			for(Triple t:patterns) {
 				Node subject = t.getSubject(); 
-				if(!eliminated.contains(subject)) { //check if subject has been eliminated 
+//				if(!eliminated.contains(subject)) { //check if subject has been eliminated 
 					Node predicate = t.getPredicate();
 					Node object = t.getObject();
 //					System.out.println("pattern:"+t);
@@ -106,13 +106,14 @@ public class SparqlOpVisitor implements OpVisitor {
 						System.out.println(stmt);
 						//add statements if not eliminated
 						if(!blacklist.contains(stmt.getSubject())) {
+//							System.out.println("addnode");
 							SelectedNode node = new SelectedNode();
 							node.setStatement(stmt);
 							node.setBinding(t);
 							selectedNodes.add(node);
 						}
 					}
-				}
+//				}
 			}
 			
 			System.out.println("-----------");
@@ -196,11 +197,24 @@ public class SparqlOpVisitor implements OpVisitor {
 					if(getStatements(subject,predicate,object,model).isEmpty()) {
 						//eliminate
 						eliminate(t,stmt, model, patterns);
-//						System.out.println("no statement:"+t);
-						eliminated.add(t.getSubject());
+//						System.out.println("no statement:"+subject+","+predicate+","+object);
+						blacklist.add(stmt.getSubject());
+//						eliminated.add(t.getSubject());
 						break;
 					}
 //					System.out.println("matches statement:"+t);
+				} else if(t.objectMatches(originalTriple.getSubject())) {
+					Node subject = t.getSubject();
+					Node predicate = t.getPredicate();
+					Node object = stmt.getSubject().asNode();
+					if(getStatements(subject,predicate,object,model).isEmpty()) {
+						//eliminate
+						eliminate(t,stmt, model, patterns);
+//						System.out.println("no statement:"+subject+","+predicate+","+object);
+						blacklist.add(stmt.getSubject());
+//						eliminated.add(t.getSubject());
+						break;
+					}
 				}
 			}
 		}
@@ -250,7 +264,7 @@ public class SparqlOpVisitor implements OpVisitor {
 			
 			if(stmts!=null) {
 				while(stmts.hasNext()) {
-					if(path==null) { //create new path for each branch out
+					if(count==1) { //create new path for each branch out
 						path = new ArrayList<Resource>();
 					}
 					
@@ -267,12 +281,24 @@ public class SparqlOpVisitor implements OpVisitor {
 					}
 		//			System.out.println(o.isLiteral() + ":" + o + ":" + subject + ":" + stmt.getPredicate());
 					if(!traversed.contains(nextNode)) {
+						int nextCount = count + 1;
 		//				System.out.println(o);
-						int tempResult = eliminateR(nextNode.asResource(),validSubjects,model,count++,subject,patterns,nextVar,path);
+						int tempResult = eliminateR(nextNode.asResource(),validSubjects,model,nextCount,subject,patterns,nextVar,path);
+						
 						//on the wind down add the branch
-						path.add(nextNode);
+						if(path!=null) {
+							path.add(nextNode);
+						} else {
+//							System.out.println("path null");
+							path = new ArrayList<Resource>();
+							path.add(nextNode);
+							path.add(subject);
+							eliminateNodes(path);
+							path.clear();
+							path = null;
+						}
 						if(tempResult>0) {
-							if(count==(tempResult+1)/2) {
+							if(count==tempResult/2) {
 								//clear the path down the line
 								path.clear();
 //								System.out.println("\n\n"+nextNode);
@@ -280,14 +306,13 @@ public class SparqlOpVisitor implements OpVisitor {
 								return tempResult;
 							}
 						}
+						if(count==1) {
+//							path.add(parent);
+							eliminateNodes(path);
+						}
 					}
 				}
 			}
-		}
-		
-		if(subject.equals(parent)) { //reached the top, eliminate all on this path
-			path.add(subject);
-			eliminateNodes(path);
 		}
 		
 		return 0;
@@ -305,6 +330,9 @@ public class SparqlOpVisitor implements OpVisitor {
 		
 		//blaclist/forward elimination
 		blacklist.addAll(path);
+//		for(Resource n:path) {
+//			System.out.println("eli"+n);
+//		}
 	}
 
 //	private Resource calculateBranchNode(Resource invalidNode, List<Resource> validSubjects, Model model) {
