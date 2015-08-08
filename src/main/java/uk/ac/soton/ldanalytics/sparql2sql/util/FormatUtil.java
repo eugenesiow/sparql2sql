@@ -14,8 +14,9 @@ public class FormatUtil {
 			return "'" + node.getDateTime().toString() + "'";
 		} else if(node.isInteger()) {
 			return node.getInteger().toString();
-		}
-		return null;		
+		} else {
+			return "'" + node.getString() + "'";
+		}		
 	}
 
 	public static String processExprType(Expr expr, Map<String, String> varMapping) {
