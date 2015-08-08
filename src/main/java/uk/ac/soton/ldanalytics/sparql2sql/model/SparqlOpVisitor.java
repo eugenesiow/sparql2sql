@@ -74,7 +74,7 @@ public class SparqlOpVisitor implements OpVisitor {
 	
 //	String previousSelect = "";
 	String selectClause = "SELECT ";
-	String projections = "";
+//	String projections = "";
 	String fromClause = "FROM ";
 	String whereClause = "WHERE ";
 	String groupClause = "GROUP BY ";	
@@ -128,11 +128,15 @@ public class SparqlOpVisitor implements OpVisitor {
 					System.out.println(n.getVar() + ":" + n.getTable() + "." + n.getColumn());
 					varMapping.put(n.getVar(), n.getTable() + "." + n.getColumn());
 					tableList.add(n.getTable());
+				} else if(n.isObjectVar) {
+					varMapping.put(n.getVar(), "'" + n.getObjectUri() + "'");
 				}
 				if(n.isSubjectLeafMap()) {
 					System.out.println(n.getSubjectVar() + ":" + n.getSubjectTable() + "." + n.getSubjectColumn());
 					varMapping.put(n.getSubjectVar(), n.getSubjectTable() + "." + n.getSubjectColumn());
 					tableList.add(n.getSubjectTable());
+				} else if(n.isSubjectVar) {
+					varMapping.put(n.getSubjectVar(), "'" + n.getObjectUri() + "'");
 				}
 			}
 			
@@ -605,12 +609,12 @@ public class SparqlOpVisitor implements OpVisitor {
 		for(Var var:arg0.getVars()) {
 			if(count++>0) {
 				selectClause += " , ";
-				projections += " , ";
+//				projections += " , ";
 			}
 			if(aliases.containsKey(var.getName())) {
 				String colName = aliases.remove(var.getName());
 				selectClause += colName + " AS " + var.getName();
-				projections += var.getName();
+//				projections += var.getName();
 			} else if(varMapping.containsKey(var.getName())){
 				String rdmsName = varMapping.remove(var.getName());
 				selectClause += rdmsName;
@@ -618,10 +622,10 @@ public class SparqlOpVisitor implements OpVisitor {
 					selectClause += " AS " + var.getName();
 				}
 				varMapping.put(var.getName(), var.getName());
-				projections += var.getName();
+//				projections += var.getName();
 			} else {
 				selectClause += var.getName();
-				projections += var.getName();
+//				projections += var.getName();
 //				count--;
 			}
 		}
@@ -655,8 +659,9 @@ public class SparqlOpVisitor implements OpVisitor {
 	}
 
 	public void visit(OpDistinct arg0) {
-		// TODO Auto-generated method stub
-		
+		String previousSelect = previousSelects.remove(previousSelects.size()-1);
+		previousSelect = previousSelect.replaceFirst("SELECT", "SELECT DISTINCT");
+		previousSelects.add(previousSelect);
 	}
 
 	public void visit(OpSlice arg0) {

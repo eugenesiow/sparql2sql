@@ -1,6 +1,5 @@
 package uk.ac.soton.ldanalytics.sparql2sql.model;
 
-import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -18,10 +17,14 @@ public class SelectedNode {
 	Boolean isLeafMap = false;
 	Boolean isSubjectLeafMap = false;
 	Boolean isLeafValue = false;
+	Boolean isSubjectVar = false;
+	Boolean isObjectVar = false;
 	String tableName = "";
 	String columnName = "";
 	String subjectTableName = "";
 	String subjectColumnName = "";
+	String subjectUri = "";
+	String objectUri = "";
 	
 	public Resource getSubject() {
 		Resource subject = null;
@@ -32,6 +35,14 @@ public class SelectedNode {
 	
 	public Boolean isLeafMap() {
 		return isLeafMap;
+	}
+	
+	public String getSubjectUri() {
+		return subjectUri;
+	}
+	
+	public String getObjectUri() {
+		return objectUri;
 	}
 	
 	public Boolean isSubjectLeafMap() {
@@ -103,15 +114,22 @@ public class SelectedNode {
 					}
 				}
 			}
+		} else {
+			if(isObject)
+				objectUri = uri;
+			else
+				subjectUri = uri;
 		}
 	}
 	
 	public void setBinding(Triple t) {
 		pattern = t;
-		//TODO: in general this should be when its not a variable
-		if(t.getObject().isLiteral()) {
+		if(t.getObject().isLiteral())
 			isLeafValue = true;
-		}
+		else if(t.getObject().isVariable())
+			isObjectVar = true;
+		if(t.getSubject().isVariable())
+			isSubjectVar = true;
 	}
 	
 	public String getVar() {
