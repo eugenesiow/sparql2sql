@@ -65,7 +65,7 @@ public class SparqlOpVisitor implements OpVisitor {
 	RdfTableMapping mapping = null;
 	List<Node> eliminated = new ArrayList<Node>();
 	List<Resource> traversed = new ArrayList<Resource>();
-	List<Resource> blacklist = new ArrayList<Resource>();
+	Set<Resource> blacklist = new HashSet<Resource>();
 	List<SelectedNode> selectedNodes = new ArrayList<SelectedNode>();
 	Map<String,String> varMapping = new HashMap<String,String>();
 	Map<String,String> aliases = new HashMap<String,String>();
@@ -93,7 +93,7 @@ public class SparqlOpVisitor implements OpVisitor {
 		bgpStarted = true;
 		//result is a list of table and its columns to select and the variables they are tied to
 		for(Model model:mapping.getMapping()) {
-			System.out.println("--------------------START MAPPING----------------------");
+//			System.out.println("--------------------START MAPPING----------------------");
 			List<Triple> patterns = bgp.getPattern().getList();
 			for(Triple t:patterns) {
 				Node subject = t.getSubject(); 
@@ -103,7 +103,7 @@ public class SparqlOpVisitor implements OpVisitor {
 //					System.out.println("pattern:"+t);
 					for(Statement stmt:getStatements(subject,predicate,object,model)) {
 						checkSubject(t,patterns,model,stmt);
-						System.out.println(stmt);
+//						System.out.println(stmt);
 						//add statements if not eliminated
 						if(!blacklist.contains(stmt.getSubject())) {
 //							System.out.println("addnode");
@@ -116,7 +116,7 @@ public class SparqlOpVisitor implements OpVisitor {
 //				}
 			}
 			
-			System.out.println("-----------");
+//			System.out.println("-----------");
 			for(SelectedNode n:selectedNodes) {
 				if(n.isLeafValue()) {
 					String modifier = "";
@@ -125,14 +125,14 @@ public class SparqlOpVisitor implements OpVisitor {
 					}
 					whereClause += modifier + n.getWherePart();
 				} else if(n.isLeafMap()) {
-					System.out.println(n.getVar() + ":" + n.getTable() + "." + n.getColumn());
+//					System.out.println(n.getVar() + ":" + n.getTable() + "." + n.getColumn());
 					varMapping.put(n.getVar(), n.getTable() + "." + n.getColumn());
 					tableList.add(n.getTable());
 				} else if(n.isObjectVar) {
 					varMapping.put(n.getVar(), "'" + n.getObjectUri() + "'");
 				}
 				if(n.isSubjectLeafMap()) {
-					System.out.println(n.getSubjectVar() + ":" + n.getSubjectTable() + "." + n.getSubjectColumn());
+//					System.out.println(n.getSubjectVar() + ":" + n.getSubjectTable() + "." + n.getSubjectColumn());
 					varMapping.put(n.getSubjectVar(), n.getSubjectTable() + "." + n.getSubjectColumn());
 					tableList.add(n.getSubjectTable());
 				} else if(n.isSubjectVar) {
@@ -140,7 +140,7 @@ public class SparqlOpVisitor implements OpVisitor {
 				}
 			}
 			
-			System.out.println("--------------------END MAPPING----------------------");
+//			System.out.println("--------------------END MAPPING----------------------");
 			//clean up
 			blacklist.clear();
 			traversed.clear();
@@ -158,6 +158,7 @@ public class SparqlOpVisitor implements OpVisitor {
 		while(stmts.hasNext()) {
 			Boolean addStatement = true;
 			Statement stmt = stmts.next();
+//			System.out.println(subject);
 			if(!subject.isVariable()) {
 				if(!stmt.getSubject().isAnon()) {
 					String uri = stmt.getSubject().getURI();
@@ -174,7 +175,8 @@ public class SparqlOpVisitor implements OpVisitor {
 				if(object.isURI()) {
 					if(!stmtObj.isResource()) {
 						addStatement = false;
-					} else {
+					}
+					else if(!stmtObj.isAnon()) {
 						String uri = stmtObj.asResource().getURI();
 						if(uri.contains("{")) {
 							addStatement = FormatUtil.compareUriPattern(object.getURI(),uri);
@@ -239,7 +241,7 @@ public class SparqlOpVisitor implements OpVisitor {
 //		}
 			
 		//backward elimination recursion and mark forward elimination/blacklisting
-		eliminateR(stmt.getSubject(),validSubjects,model, 0, stmt.getSubject(), patterns, t.getSubject(), null);
+		eliminateR(stmt.getSubject(),validSubjects,model, 0, stmt.getSubject(), patterns, t.getSubject(), new ArrayList<Resource>());
 		
 		//forward elimination
 		//add subject to list and also all connected objects if not branch
@@ -247,7 +249,7 @@ public class SparqlOpVisitor implements OpVisitor {
 	
 	private int eliminateR(Resource subject, List<Resource> validSubjects,
 			Model model, int count, Resource parent, List<Triple> patterns, Node var, List<Resource> path) {
-//		System.out.println(parent+"->"+subject);
+//		System.out.println("\t"+parent+"->"+subject);
 		traversed.add(subject);
 		
 		if(validSubjects.contains(subject)) {
@@ -268,9 +270,9 @@ public class SparqlOpVisitor implements OpVisitor {
 			
 			if(stmts!=null) {
 				while(stmts.hasNext()) {
-					if(count==1) { //create new path for each branch out
-						path = new ArrayList<Resource>();
-					}
+//					if(count==1) { //create new path for each branch out
+						List<Resource> childPath = new ArrayList<Resource>();
+//					}
 					
 					Statement stmt = stmts.next();
 					Resource nextNode = null;
@@ -287,33 +289,38 @@ public class SparqlOpVisitor implements OpVisitor {
 					if(!traversed.contains(nextNode)) {
 						int nextCount = count + 1;
 		//				System.out.println(o);
-						int tempResult = eliminateR(nextNode.asResource(),validSubjects,model,nextCount,subject,patterns,nextVar,path);
+						int tempResult = eliminateR(nextNode.asResource(),validSubjects,model,nextCount,subject,patterns,nextVar,childPath);
 						
-						//on the wind down add the branch
-						if(path!=null) {
-							path.add(nextNode);
-						} else {
-//							System.out.println("path null");
-							path = new ArrayList<Resource>();
-							path.add(nextNode);
-							path.add(subject);
-							eliminateNodes(path);
-							path.clear();
-							path = null;
-						}
+//						//on the wind down add the branch
+						path.add(nextNode);
+//						if(path!=null) {
+//							path.add(nextNode);
+//						} else {
+////							System.out.println("path null");
+//							path = new ArrayList<Resource>();
+//							path.add(nextNode);
+//							path.add(subject);
+//							eliminateNodes(path);
+//							path.clear();
+//							path = null;
+//						}
 						if(tempResult>0) {
 							if(count==tempResult/2) {
+//								for(Resource r:path)
+//									System.out.println("\t\tcleared path:"+r);
 								//clear the path down the line
 								path.clear();
+								childPath.clear();
 //								System.out.println("\n\n"+nextNode);
 							} else {
 								return tempResult;
 							}
 						}
-						if(count==1) {
+//						if(count==1) {
+						path.addAll(childPath);
 //							path.add(parent);
 							eliminateNodes(path);
-						}
+//						}
 					}
 				}
 			}
@@ -334,9 +341,10 @@ public class SparqlOpVisitor implements OpVisitor {
 		
 		//blaclist/forward elimination
 		blacklist.addAll(path);
-//		for(Resource n:path) {
-//			System.out.println("eli"+n);
+//		for(Resource n:blacklist) {
+//			System.out.println("\teli:"+n);
 //		}
+//		System.out.println("-------------");
 	}
 
 //	private Resource calculateBranchNode(Resource invalidNode, List<Resource> validSubjects, Model model) {

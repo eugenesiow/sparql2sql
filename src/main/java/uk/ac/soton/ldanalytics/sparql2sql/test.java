@@ -130,21 +130,21 @@ public class test {
 //				"    FILTER(?motionplatform = ?meterplatform && ?motionhours = ?meterhours && ?motiondate = ?meterdate && ?isMotion=0)\n" + 
 //				"  }";
 		
-		String queryStr = "PREFIX om-owl: <http://knoesis.wright.edu/ssw/ont/sensor-observation.owl#>\r\n" + 
-				"PREFIX weather: <http://knoesis.wright.edu/ssw/ont/weather.owl#>\r\n" + 
-				"PREFIX owl-time: <http://www.w3.org/2006/time#>\r\n" + 
-				"PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>\r\n" + 
-				"\r\n" + 
-				"SELECT DISTINCT ?sensor ?value ?uom\r\n" + 
-				"WHERE {\r\n" + 
-				"  ?observation om-owl:procedure ?sensor ;\r\n" + 
-				"               a weather:RainfallObservation ;\r\n" + 
-				"               om-owl:result ?result ;\r\n" + 
-				"               om-owl:samplingTime ?instant.\r\n" + 
-				"  ?instant owl-time:inXSDDateTime ?time.\r\n" + 
-				"  ?result om-owl:floatValue ?value ;\r\n" + 
-				"          om-owl:uom ?uom .\r\n" + 
-				"  FILTER (?time>\"2013-05-08T13:00:00\"^^xsd:dateTime && ?time<\"2013-05-08T14:00:00\"^^xsd:dateTime)\r\n" + 
+		String queryStr = "PREFIX om-owl: <http://knoesis.wright.edu/ssw/ont/sensor-observation.owl#>\n" + 
+				"PREFIX weather: <http://knoesis.wright.edu/ssw/ont/weather.owl#>\n" + 
+				"PREFIX owl-time: <http://www.w3.org/2006/time#>\n" + 
+				"PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>\n" + 
+				"\n" + 
+				"SELECT DISTINCT ?sensor ?value ?uom\n" + 
+				"WHERE {\n" + 
+				"  ?observation om-owl:procedure ?sensor ;\n" + 
+				"               a weather:RainfallObservation ;\n" + 
+				"               om-owl:result ?result ;\n" + 
+				"               om-owl:samplingTime ?instant .\n" + 
+				"  ?instant owl-time:inXSDDateTime ?time .\n" + 
+				"  ?result om-owl:floatValue ?value ;\n" + 
+				"          om-owl:uom ?uom .\n" + 
+				"  FILTER (?time>\"2003-04-01T00:00:00\"^^xsd:dateTime && ?time<\"2003-04-01T01:00:00\")\n" + 
 				"}";
 
 		RdfTableMapping mapping = new RdfTableMapping();
@@ -157,7 +157,7 @@ public class test {
 		long startTime = System.currentTimeMillis();
 		Query query = QueryFactory.create(queryStr);
 		Op op = Algebra.compile(query);
-		System.out.println(op);
+//		System.out.println(op);
 		
 		SparqlOpVisitor v = new SparqlOpVisitor();
 		v.useMapping(mapping);
