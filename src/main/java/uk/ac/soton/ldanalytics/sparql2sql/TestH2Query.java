@@ -33,8 +33,9 @@ public class TestH2Query {
 			String queryName = "q1";
 			String queryStr = FileUtils.readFileToString(new File(queryPath + queryName + ".sparql"));
 		
+			int run = 3;
 			int totalCount = 0;
-			BufferedWriter bw = new BufferedWriter(new FileWriter(outputPath + "results_"+queryName+".csv"));
+			BufferedWriter bw = new BufferedWriter(new FileWriter(outputPath + "results_"+queryName+"_run"+run+".csv"));
 			
 			Query query = QueryFactory.create(queryStr);
 			Op op = Algebra.compile(query);
@@ -73,9 +74,14 @@ public class TestH2Query {
 						bw.append(stationName+","+translationTime+","+executionTime+"\n");
 						bw.flush();
 					} catch(SQLException se) {
+						bw.append(stationName+","+translationTime+",err\n");
+						bw.flush();
 						System.out.println(stationName);
 //						se.printStackTrace();
 					}
+				} else {
+					bw.append(stationName+","+translationTime+",0\n");
+					bw.flush();
 				}
 				
 			}
