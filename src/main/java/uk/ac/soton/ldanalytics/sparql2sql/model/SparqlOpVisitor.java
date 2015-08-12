@@ -106,13 +106,13 @@ public class SparqlOpVisitor implements OpVisitor {
 						checkSubject(t,patterns,model,stmt);
 //						System.out.println(stmt);
 						//add statements if not eliminated
-						if(!blacklist.contains(stmt.getSubject())) {
+//						if(!blacklist.contains(stmt.getSubject())) {
 //							System.out.println("addnode");
 							SelectedNode node = new SelectedNode();
 							node.setStatement(stmt);
 							node.setBinding(t);
 							selectedNodes.add(node);
-						}
+//						}
 					}
 //				}
 			}

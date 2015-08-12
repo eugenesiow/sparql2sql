@@ -147,20 +147,44 @@ public class test {
 //				"  FILTER (?time>\"2003-04-01T00:00:00\"^^xsd:dateTime && ?time<\"2003-04-01T01:00:00\")\n" + 
 //				"}";
 
-		String queryStr = "PREFIX om-owl: <http://knoesis.wright.edu/ssw/ont/sensor-observation.owl#>\n" + 
+//		String queryStr = "PREFIX om-owl: <http://knoesis.wright.edu/ssw/ont/sensor-observation.owl#>\n" + 
+//				"PREFIX weather: <http://knoesis.wright.edu/ssw/ont/weather.owl#>\n" + 
+//				"PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>\n" + 
+//				"PREFIX owl-time: <http://www.w3.org/2006/time#>\n" + 
+//				"\n" + 
+//				"SELECT ?sensor WHERE {\n" + 
+//				"	?observation om-owl:procedure ?sensor ;\n" + 
+//				"	           om-owl:observedProperty weather:_WindSpeed ;\n" + 
+//				"	           om-owl:result [ om-owl:floatValue ?value ] ;\n" + 
+//				"	           om-owl:samplingTime ?instant .\n" + 
+//				"	?instant owl-time:inXSDDateTime ?time .\n" + 
+//				"	FILTER (?time>\"2003-04-01T00:00:00\"^^xsd:dateTime && ?time<\"2003-04-01T01:00:00\"^^xsd:dateTime)\n" + 
+//				"} GROUP BY ?sensor\n" + 
+//				"HAVING ( AVG(?value) >= \"74\"^^xsd:float )";
+		
+		String queryStr = "\n" + 
+				"PREFIX om-owl: <http://knoesis.wright.edu/ssw/ont/sensor-observation.owl#>\n" + 
 				"PREFIX weather: <http://knoesis.wright.edu/ssw/ont/weather.owl#>\n" + 
 				"PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>\n" + 
 				"PREFIX owl-time: <http://www.w3.org/2006/time#>\n" + 
 				"\n" + 
-				"SELECT ?sensor WHERE {\n" + 
-				"	?observation om-owl:procedure ?sensor ;\n" + 
-				"	           om-owl:observedProperty weather:_WindSpeed ;\n" + 
-				"	           om-owl:result [ om-owl:floatValue ?value ] ;\n" + 
-				"	           om-owl:samplingTime ?instant .\n" + 
-				"	?instant owl-time:inXSDDateTime ?time .\n" + 
-				"	FILTER (?time>\"2003-04-01T00:00:00\"^^xsd:dateTime && ?time<\"2003-04-01T01:00:00\"^^xsd:dateTime)\n" + 
-				"} GROUP BY ?sensor\n" + 
-				"HAVING ( AVG(?value) >= \"74\"^^xsd:float )";
+				"SELECT ?sensor (AVG(?windSpeed) AS ?averageWindSpeed)\n" + 
+				"               (AVG(?temperature) AS ?averageTemperature)\n" + 
+				"WHERE {\n" + 
+				"  ?temperatureObservation om-owl:procedure ?sensor ;\n" + 
+				"                          a weather:TemperatureObservation ;\n" + 
+				"                          om-owl:result ?temperatureResult ;\n" + 
+				"                          om-owl:samplingTime ?instant .\n" + 
+				"  ?instant owl-time:inXSDDateTime ?time .\n" + 
+				"  FILTER (?time>\"2003-04-01T00:00:00\"^^xsd:dateTime && ?time<\"2003-04-01T01:00:00\"^^xsd:dateTime)\n" + 
+				"  ?temperatureResult om-owl:floatValue ?temperature.\n" + 
+				"  FILTER(?temperature > \"32\"^^xsd:float)\n" + 
+				"  ?windSpeedObservation om-owl:procedure ?sensor ;\n" + 
+				"                        a weather:WindSpeedObservation ;\n" + 
+				"                        om-owl:samplingTime ?instant ;\n" + 
+				"                        om-owl:result [ om-owl:floatValue ?windSpeed ]  .\n" + 
+				"}\n" + 
+				"GROUP BY ?sensor";
 		
 		RdfTableMapping mapping = new RdfTableMapping();
 		mapping.loadMapping("mapping/4UT01.nt");
