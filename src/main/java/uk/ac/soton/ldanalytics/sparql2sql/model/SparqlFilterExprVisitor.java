@@ -21,9 +21,11 @@ import com.hp.hpl.jena.sparql.expr.NodeValue;
 
 public class SparqlFilterExprVisitor implements ExprVisitor {
 	String expression = "";
+	String havingExpression = "";
 	String currentPart = "";
 	List<String> exprParts = new ArrayList<String>();
-	String[] fList = {"<",">","=","!="};
+	List<String> havingParts = new ArrayList<String>();
+	String[] fList = {"<",">","=","!=","<=",">="};
 	List<String> functionList = Arrays.asList(fList);
 	String combinePart = "";
 	private Map<String, String> varMapping;
@@ -35,11 +37,22 @@ public class SparqlFilterExprVisitor implements ExprVisitor {
 			if(++counter<exprParts.size()) {
 				 expression += combinePart;
 			}
+		} 
+		counter = 0;
+		for(String havingPart:havingParts) {
+			havingExpression += havingPart;
+			if(++counter<havingParts.size()) {
+				havingExpression += combinePart;
+			}
 		}
 	}
 	
 	public String getExpression() {
 		return expression;
+	}
+	
+	public String getHavingExpression() {
+		return havingExpression;
 	}
 
 	public void startVisit() {
@@ -59,12 +72,16 @@ public class SparqlFilterExprVisitor implements ExprVisitor {
 			Expr leftSide = args.getArg1();
 			Expr rightSide = args.getArg2();
 			currentPart += FormatUtil.handleExpr(leftSide,varMapping) + args.getOpName() + FormatUtil.handleExpr(rightSide, varMapping);
-			exprParts.add(currentPart);
+			if(FormatUtil.isAggVar(leftSide)) {
+				havingParts.add(currentPart);
+			} else {
+				exprParts.add(currentPart);
+			}
 			currentPart = "";
 		}
 		else if(args.getOpName().equals("&&")) 
 			combinePart = " AND ";
-		else if(args.getOpName().equals("&&")) 
+		else if(args.getOpName().equals("||")) 
 			combinePart = " OR ";
 	}
 

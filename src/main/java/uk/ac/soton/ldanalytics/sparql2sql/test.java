@@ -130,23 +130,38 @@ public class test {
 //				"    FILTER(?motionplatform = ?meterplatform && ?motionhours = ?meterhours && ?motiondate = ?meterdate && ?isMotion=0)\n" + 
 //				"  }";
 		
+//		String queryStr = "PREFIX om-owl: <http://knoesis.wright.edu/ssw/ont/sensor-observation.owl#>\n" + 
+//				"PREFIX weather: <http://knoesis.wright.edu/ssw/ont/weather.owl#>\n" + 
+//				"PREFIX owl-time: <http://www.w3.org/2006/time#>\n" + 
+//				"PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>\n" + 
+//				"\n" + 
+//				"SELECT DISTINCT ?sensor ?value ?uom\n" + 
+//				"WHERE {\n" + 
+//				"  ?observation om-owl:procedure ?sensor ;\n" + 
+//				"               a weather:RainfallObservation ;\n" + 
+//				"               om-owl:result ?result ;\n" + 
+//				"               om-owl:samplingTime ?instant .\n" + 
+//				"  ?instant owl-time:inXSDDateTime ?time .\n" + 
+//				"  ?result om-owl:floatValue ?value ;\n" + 
+//				"          om-owl:uom ?uom .\n" + 
+//				"  FILTER (?time>\"2003-04-01T00:00:00\"^^xsd:dateTime && ?time<\"2003-04-01T01:00:00\")\n" + 
+//				"}";
+
 		String queryStr = "PREFIX om-owl: <http://knoesis.wright.edu/ssw/ont/sensor-observation.owl#>\n" + 
 				"PREFIX weather: <http://knoesis.wright.edu/ssw/ont/weather.owl#>\n" + 
-				"PREFIX owl-time: <http://www.w3.org/2006/time#>\n" + 
 				"PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>\n" + 
+				"PREFIX owl-time: <http://www.w3.org/2006/time#>\n" + 
 				"\n" + 
-				"SELECT DISTINCT ?sensor ?value ?uom\n" + 
-				"WHERE {\n" + 
-				"  ?observation om-owl:procedure ?sensor ;\n" + 
-				"               a weather:RainfallObservation ;\n" + 
-				"               om-owl:result ?result ;\n" + 
-				"               om-owl:samplingTime ?instant .\n" + 
-				"  ?instant owl-time:inXSDDateTime ?time .\n" + 
-				"  ?result om-owl:floatValue ?value ;\n" + 
-				"          om-owl:uom ?uom .\n" + 
-				"  FILTER (?time>\"2003-04-01T00:00:00\"^^xsd:dateTime && ?time<\"2003-04-01T01:00:00\")\n" + 
-				"}";
-
+				"SELECT ?sensor WHERE {\n" + 
+				"	?observation om-owl:procedure ?sensor ;\n" + 
+				"	           om-owl:observedProperty weather:_WindSpeed ;\n" + 
+				"	           om-owl:result [ om-owl:floatValue ?value ] ;\n" + 
+				"	           om-owl:samplingTime ?instant .\n" + 
+				"	?instant owl-time:inXSDDateTime ?time .\n" + 
+				"	FILTER (?time>\"2003-04-01T00:00:00\"^^xsd:dateTime && ?time<\"2003-04-01T01:00:00\"^^xsd:dateTime)\n" + 
+				"} GROUP BY ?sensor\n" + 
+				"HAVING ( AVG(?value) >= \"74\"^^xsd:float )";
+		
 		RdfTableMapping mapping = new RdfTableMapping();
 		mapping.loadMapping("mapping/4UT01.nt");
 //		mapping.loadMapping("mapping/smarthome_environment.nt");
@@ -157,7 +172,7 @@ public class test {
 		long startTime = System.currentTimeMillis();
 		Query query = QueryFactory.create(queryStr);
 		Op op = Algebra.compile(query);
-//		System.out.println(op);
+		System.out.println(op);
 		
 		SparqlOpVisitor v = new SparqlOpVisitor();
 		v.useMapping(mapping);

@@ -14,7 +14,10 @@ public class FormatUtil {
 			return "'" + node.getDateTime().toString() + "'";
 		} else if(node.isInteger()) {
 			return node.getInteger().toString();
-		} else {
+		} else if(node.isFloat()) {
+			return Float.toString(node.getFloat());
+		}
+		else {
 			return "'" + node.getString() + "'";
 		}		
 	}
@@ -83,6 +86,10 @@ public class FormatUtil {
 
 	public static String processLiteral(Node object) {
 		return object.getLiteral().getValue().toString();
+	}
+
+	public static boolean isAggVar(Expr expr) {
+		return expr.getVarName().startsWith(".");
 	}
 	
 	

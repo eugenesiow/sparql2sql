@@ -78,6 +78,7 @@ public class SparqlOpVisitor implements OpVisitor {
 	String fromClause = "FROM ";
 	String whereClause = "WHERE ";
 	String groupClause = "GROUP BY ";	
+	String havingClause = "HAVING ";
 	
 	Boolean bgpStarted = false;
 	
@@ -442,10 +443,17 @@ public class SparqlOpVisitor implements OpVisitor {
 			ExprWalker.walk(v,filter);
 			v.finishVisit();
 			String modifier = "";
-			if(!whereClause.equals("WHERE ")) {
-				modifier = " AND ";
+			if(!v.getExpression().equals("")) {
+				if(!whereClause.equals("WHERE ")) {
+					modifier = " AND ";
+				}
+				whereClause += modifier + v.getExpression();
+			} else if(!v.getHavingExpression().equals("")) {
+				if(!havingClause.equals("HAVING ")) {
+					modifier = " AND ";
+				}
+				havingClause += modifier + v.getHavingExpression();
 			}
-			whereClause += modifier + v.getExpression(); 
 		}
 		
 //		System.out.println(whereClause);
@@ -657,6 +665,7 @@ public class SparqlOpVisitor implements OpVisitor {
 		fromClause = "FROM ";
 		whereClause = "WHERE ";
 		groupClause = "GROUP BY ";
+		havingClause = "HAVING ";
 		
 		bgpStarted = false;
 	}
@@ -693,7 +702,8 @@ public class SparqlOpVisitor implements OpVisitor {
 			}
 			if(!v.getExpression().equals("")) {
 				groupClause += v.getExpression();
-				aliases.put(var.getName(), v.getExpression());
+				varMapping.put(var.getName(), v.getExpression());
+//				aliases.put(var.getName(), v.getExpression());
 			} else {
 				groupClause += FormatUtil.mapVar(var.getName(),varMapping);
 			} 
@@ -703,7 +713,8 @@ public class SparqlOpVisitor implements OpVisitor {
 			SparqlGroupExprVisitor v = new SparqlGroupExprVisitor();
 			v.setMapping(varMapping);
 			ExprWalker.walk(v, agg);
-			aliases.put(v.getAggKey(),v.getAggVal());
+			varMapping.put(v.getAggKey(),v.getAggVal());
+//			aliases.put(v.getAggKey(),v.getAggVal());
 		}
 	}
 
@@ -725,11 +736,15 @@ public class SparqlOpVisitor implements OpVisitor {
 		if(groupClause.trim().equals("GROUP BY")) {
 			groupClause = "";
 		}
+		if(havingClause.trim().equals("HAVING")) {
+			havingClause = "";
+		}
 		
 		return selectClause + " " +
 				fromClause + " " +
 				whereClause + " " +
-				groupClause + " ";
+				groupClause + " " +
+				havingClause + " ";
 	}
 	
 	public String getSQL() {
