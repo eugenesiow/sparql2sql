@@ -64,7 +64,7 @@ public class SparqlOpVisitor implements OpVisitor {
 	
 	RdfTableMapping mapping = null;
 	List<Node> eliminated = new ArrayList<Node>();
-	List<Resource> traversed = new ArrayList<Resource>();
+//	List<Resource> traversed = new ArrayList<Resource>();
 	Set<Resource> blacklist = new HashSet<Resource>();
 	List<SelectedNode> selectedNodes = new ArrayList<SelectedNode>();
 	Map<String,String> varMapping = new HashMap<String,String>();
@@ -89,63 +89,76 @@ public class SparqlOpVisitor implements OpVisitor {
 	public void useMapping(RdfTableMapping mapping) {
 		this.mapping = mapping;
 	}
+	
+	public Boolean traverseGraph(Triple t, List<Triple> triples, Model model, QueryPatterns queryPatterns) {
+		System.out.println("pattern:"+t);
+		List<Node> traversed = new ArrayList<Node>();
+		for(Statement stmt:getStatements(t.getSubject(),t.getPredicate(),t.getObject(),model)) {
+			if(checkSubject(t,stmt)) {
+				System.out.println("start:"+stmt);
+				traverseGraphR(t.getSubject(),stmt.getSubject(),triples,model,queryPatterns,traversed,"");
+			}
+		}
+		return false;
+	}
+
+	private void traverseGraphR(Node startVar, Resource startSubject,
+			List<Triple> triples, Model model, QueryPatterns queryPatterns, List<Node> traversed, String format) {
+		System.out.println(startSubject);
+			//get links
+			for(Triple t:triples) {
+				if(!traversed.contains(t.getSubject())) {
+					traversed.add(t.getSubject());
+					if(t.getSubject().matches(startVar)) {
+						for(Statement stmt:getStatements(startSubject.asNode(),t.getPredicate(),t.getObject(),model)) {
+							if(checkSubject(t,stmt)) {
+								traversed.add(t.getObject());
+								format += "\t";
+								System.out.println(format+stmt);
+								if(stmt.getObject().isResource())
+									traverseGraphR(t.getObject(),stmt.getObject().asResource(),triples,model,queryPatterns,traversed,format);
+							} else {
+								System.out.println("hitfalse:"+stmt);
+								traversed.clear();
+								return;
+							}
+						}
+					} 
+					else if(t.getObject().matches(startVar)) {
+						traversed.clear();
+						System.out.println("\t\tobj"+t);
+					}
+				}
+			}
+	}
 
 	public void visit(OpBGP bgp) {
+		QueryPatterns selectedQueryPatterns = new QueryPatterns();
 		bgpStarted = true;
 		//result is a list of table and its columns to select and the variables they are tied to
 		for(Model model:mapping.getMapping()) {
 //			System.out.println("--------------------START MAPPING----------------------");
 			List<Triple> patterns = bgp.getPattern().getList();
-			for(Triple t:patterns) {
-				Node subject = t.getSubject(); 
-//				if(!eliminated.contains(subject)) { //check if subject has been eliminated 
-					Node predicate = t.getPredicate();
-					Node object = t.getObject();
-//					System.out.println("pattern:"+t);
-					for(Statement stmt:getStatements(subject,predicate,object,model)) {
-						checkSubject(t,patterns,model,stmt);
-//						System.out.println(stmt);
-						//add statements if not eliminated
-						if(!blacklist.contains(stmt.getSubject())) {
-//							System.out.println("addnode");
-							SelectedNode node = new SelectedNode();
-							node.setStatement(stmt);
-							node.setBinding(t);
-							selectedNodes.add(node);
-						} 
-					}
+			QueryPatterns queryPatterns = new QueryPatterns();
+			Resource s = null;
+			RDFNode o = null;
+			Triple t = patterns.get(0);
+			StmtIterator stmts = model.listStatements(s, model.createProperty(t.getPredicate().getURI()), o);
+
+			while(stmts.hasNext()) {
+				Statement stmt = stmts.next();
+				if(checkSubject(t,stmt)) {
+					traverseGraphR(t.getSubject(),stmt.getSubject(),patterns,model,queryPatterns,new ArrayList<Node>(),"");
+				}
+			}
+//			for(Triple t:patterns) {
+//				if(!selectedQueryPatterns.contains(t)) {
+//					QueryPatterns queryPatterns = new QueryPatterns();
+//					if(traverseGraph(t,patterns,model,queryPatterns)) {
+//						selectedQueryPatterns.addAll(queryPatterns);
+//					}
 //				}
-			}
-			
-//			System.out.println("-----------");
-			for(SelectedNode n:selectedNodes) {
-				if(n.isLeafValue()) {
-					String modifier = "";
-					if(!whereClause.trim().equals("WHERE")) {
-						modifier = " AND ";
-					}
-					whereClause += modifier + n.getWherePart();
-				} else if(n.isLeafMap()) {
-//					System.out.println(n.getVar() + ":" + n.getTable() + "." + n.getColumn());
-					varMapping.put(n.getVar(), n.getTable() + "." + n.getColumn());
-					tableList.add(n.getTable());
-				} else if(n.isObjectVar) {
-					varMapping.put(n.getVar(), "'" + n.getObjectUri() + "'");
-				}
-				if(n.isSubjectLeafMap()) {
-//					System.out.println(n.getSubjectVar() + ":" + n.getSubjectTable() + "." + n.getSubjectColumn());
-					varMapping.put(n.getSubjectVar(), n.getSubjectTable() + "." + n.getSubjectColumn());
-					tableList.add(n.getSubjectTable());
-				} else if(n.isSubjectVar) {
-					varMapping.put(n.getSubjectVar(), "'" + n.getObjectUri() + "'");
-				}
-			}
-			
-//			System.out.println("--------------------END MAPPING----------------------");
-			//clean up
-			blacklist.clear();
-			traversed.clear();
-			eliminated.clear();
+//			}
 		}
 	}
 
@@ -194,145 +207,147 @@ public class SparqlOpVisitor implements OpVisitor {
 		return stmtList;
 	}
 
-	private void checkSubject(Triple originalTriple, List<Triple> patterns, Model model, Statement stmt) {
-		for(Triple t:patterns) {
-			if(!t.matches(originalTriple)) {
-				if(t.subjectMatches(originalTriple.getSubject())) {
-					Node subject = stmt.getSubject().asNode();
-					Node predicate = t.getPredicate();
-					Node object = t.getObject();
-					if(getStatements(subject,predicate,object,model).isEmpty()) {
-						//eliminate
-						eliminate(t,stmt, model, patterns);
-//						System.out.println("no statement:"+subject+","+predicate+","+object);
-						blacklist.add(stmt.getSubject());
-//						eliminated.add(t.getSubject());
-						break;
-					}
-//					System.out.println("matches statement:"+t);
-				} else if(t.objectMatches(originalTriple.getSubject())) {
-					Node subject = t.getSubject();
-					Node predicate = t.getPredicate();
-					Node object = stmt.getSubject().asNode();
-					if(getStatements(subject,predicate,object,model).isEmpty()) {
-						//eliminate
-						eliminate(t,stmt, model, patterns);
-//						System.out.println("no statement:"+subject+","+predicate+","+object);
-						blacklist.add(stmt.getSubject());
-//						eliminated.add(t.getSubject());
-						break;
-					}
-				}
-			}
+	private Boolean checkSubject(Triple triple, Statement stmt) {
+		Node subjectVar = triple.getSubject();
+		Node objectVar = triple.getObject();
+		Resource subjectNode = stmt.getSubject();
+		RDFNode objectNode = stmt.getObject();
+		String key = subjectVar.toString() + subjectNode.toString();
+		if(blacklist.contains(key)) {
+			return false;
 		}
+		
+		if(!objectVar.isVariable()) {
+			if(objectVar.isLiteral()) {
+				if(objectNode.isLiteral()) 
+					return true;
+			} else if (objectVar.isURI()) {
+				String uri = objectNode.asResource().getURI();
+				if(uri.contains("{")) {
+					return FormatUtil.compareUriPattern(objectVar.getURI(),uri);
+				} else {
+					if(!uri.equals(objectVar.getURI()))
+						return false;
+					else
+						return true;
+				}
+			} else if (objectVar.isBlank()) {
+				if(!objectNode.isLiteral())
+					return true;
+			}
+			return false;
+		}
+		
+		return true;
+		
 	}
 
-	private void eliminate(Triple t, Statement stmt, Model model, List<Triple> patterns) {
-		//check if its a branch and where the branch is
-		Node subject = t.getSubject();
-		Node predicate = t.getPredicate();
-		Node object = t.getObject();
-		List<Resource> validSubjects = new ArrayList<Resource>();
-		for(Statement correctStmt:getStatements(subject,predicate,object,model)) {
-			validSubjects.add(correctStmt.getSubject());
-		}
-//		Boolean hasBranch = validSubjects.size() > 0;
-//		if(hasBranch) { //calculate the common node where it branches
-//			calculateBranchNode(stmt.getSubject(),validSubjects,model);
+//	private void eliminate(Triple t, Statement stmt, Model model, List<Triple> patterns) {
+//		//check if its a branch and where the branch is
+//		Node subject = t.getSubject();
+//		Node predicate = t.getPredicate();
+//		Node object = t.getObject();
+//		List<Resource> validSubjects = new ArrayList<Resource>();
+//		for(Statement correctStmt:getStatements(subject,predicate,object,model)) {
+//			validSubjects.add(correctStmt.getSubject());
 //		}
-			
-		//backward elimination recursion and mark forward elimination/blacklisting
-		eliminateR(stmt.getSubject(),validSubjects,model, 0, stmt.getSubject(), patterns, t.getSubject(), new ArrayList<Resource>());
-		
-		//forward elimination
-		//add subject to list and also all connected objects if not branch
-	}
-	
-	private int eliminateR(Resource subject, List<Resource> validSubjects,
-			Model model, int count, Resource parent, List<Triple> patterns, Node var, List<Resource> path) {
-//		System.out.println("\t"+parent+"->"+subject);
-		traversed.add(subject);
-		
-		if(validSubjects.contains(subject)) {
-			return count;
-		}
-		
-		for(Triple t:patterns) {
-			StmtIterator stmts = null;
-			Node nextVar = null;
-			if(t.subjectMatches(var)) {
-				stmts = model.listStatements(subject,null,(RDFNode)null);
-				nextVar = t.getObject();
-			}
-			else if(t.objectMatches(var)) {
-				stmts = model.listStatements(null,null,subject);
-				nextVar = t.getMatchSubject();
-			}
-			
-			if(stmts!=null) {
-				while(stmts.hasNext()) {
-//					if(count==1) { //create new path for each branch out
-						List<Resource> childPath = new ArrayList<Resource>();
-//					}
-					
-					Statement stmt = stmts.next();
-					Resource nextNode = null;
-					if(t.subjectMatches(var)) {
-						if(!stmt.getObject().isLiteral()) {
-							nextNode = stmt.getObject().asResource();
-						} else {
-							continue;
-						}
-					} else if(t.objectMatches(var)) {
-						nextNode = stmt.getSubject();
-					}
-		//			System.out.println(o.isLiteral() + ":" + o + ":" + subject + ":" + stmt.getPredicate());
-					if(!traversed.contains(nextNode)) {
-						int nextCount = count + 1;
-		//				System.out.println(o);
-						int tempResult = eliminateR(nextNode.asResource(),validSubjects,model,nextCount,subject,patterns,nextVar,childPath);
-						
-//						//on the wind down add the branch
-						path.add(nextNode);
-//						if(path!=null) {
-//							path.add(nextNode);
+////		Boolean hasBranch = validSubjects.size() > 0;
+////		if(hasBranch) { //calculate the common node where it branches
+////			calculateBranchNode(stmt.getSubject(),validSubjects,model);
+////		}
+//			
+//		//backward elimination recursion and mark forward elimination/blacklisting
+//		eliminateR(stmt.getSubject(),validSubjects,model, 0, stmt.getSubject(), patterns, t.getSubject(), new ArrayList<Resource>());
+//		
+//		//forward elimination
+//		//add subject to list and also all connected objects if not branch
+//	}
+//	
+//	private int eliminateR(Resource subject, List<Resource> validSubjects,
+//			Model model, int count, Resource parent, List<Triple> patterns, Node var, List<Resource> path) {
+////		System.out.println("\t"+parent+"->"+subject);
+//		traversed.add(subject);
+//		
+//		if(validSubjects.contains(subject)) {
+//			return count;
+//		}
+//		
+//		for(Triple t:patterns) {
+//			StmtIterator stmts = null;
+//			Node nextVar = null;
+//			if(t.subjectMatches(var)) {
+//				stmts = model.listStatements(subject,null,(RDFNode)null);
+//				nextVar = t.getObject();
+//			}
+//			else if(t.objectMatches(var)) {
+//				stmts = model.listStatements(null,null,subject);
+//				nextVar = t.getMatchSubject();
+//			}
+//			
+//			if(stmts!=null) {
+//				while(stmts.hasNext()) {
+////					if(count==1) { //create new path for each branch out
+//						List<Resource> childPath = new ArrayList<Resource>();
+////					}
+//					
+//					Statement stmt = stmts.next();
+//					Resource nextNode = null;
+//					if(t.subjectMatches(var)) {
+//						if(!stmt.getObject().isLiteral()) {
+//							nextNode = stmt.getObject().asResource();
 //						} else {
-////							System.out.println("path null");
-//							path = new ArrayList<Resource>();
-//							path.add(nextNode);
-//							path.add(subject);
+//							continue;
+//						}
+//					} else if(t.objectMatches(var)) {
+//						nextNode = stmt.getSubject();
+//					}
+//		//			System.out.println(o.isLiteral() + ":" + o + ":" + subject + ":" + stmt.getPredicate());
+//					if(!traversed.contains(nextNode)) {
+//						int nextCount = count + 1;
+//		//				System.out.println(o);
+//						int tempResult = eliminateR(nextNode.asResource(),validSubjects,model,nextCount,subject,patterns,nextVar,childPath);
+//						
+////						//on the wind down add the branch
+//						path.add(nextNode);
+////						if(path!=null) {
+////							path.add(nextNode);
+////						} else {
+//////							System.out.println("path null");
+////							path = new ArrayList<Resource>();
+////							path.add(nextNode);
+////							path.add(subject);
+////							eliminateNodes(path);
+////							path.clear();
+////							path = null;
+////						}
+//						if(tempResult>0) {
+//							if(count==tempResult/2) {
+////								for(Resource r:path) {
+////									if(blacklist.contains(r)) {
+////										blacklist.remove(r);
+////									}
+////								}
+//								//clear the path down the line
+//								path.clear();
+//								
+////								childPath.clear();
+////								System.out.println("\n\n"+nextNode);
+//							} else {
+//								return tempResult;
+//							}
+//						}
+////						if(count==1) {
+//						path.addAll(childPath);
+////							path.add(parent);
 //							eliminateNodes(path);
-//							path.clear();
-//							path = null;
-//						}
-						if(tempResult>0) {
-							if(count==tempResult/2) {
-//								for(Resource r:path) {
-//									if(blacklist.contains(r)) {
-//										blacklist.remove(r);
-//									}
-//								}
-								//clear the path down the line
-								path.clear();
-								
-//								childPath.clear();
-//								System.out.println("\n\n"+nextNode);
-							} else {
-								return tempResult;
-							}
-						}
-//						if(count==1) {
-						path.addAll(childPath);
-//							path.add(parent);
-							eliminateNodes(path);
-//						}
-					}
-				}
-			}
-		}
-		
-		return 0;
-	}
+////						}
+//					}
+//				}
+//			}
+//		}
+//		
+//		return 0;
+//	}
 	
 	private void eliminateNodes(List<Resource> path) {		
 		//eliminate nodes in list	
