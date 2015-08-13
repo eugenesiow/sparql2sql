@@ -106,13 +106,13 @@ public class SparqlOpVisitor implements OpVisitor {
 						checkSubject(t,patterns,model,stmt);
 //						System.out.println(stmt);
 						//add statements if not eliminated
-//						if(!blacklist.contains(stmt.getSubject())) {
+						if(!blacklist.contains(stmt.getSubject())) {
 //							System.out.println("addnode");
 							SelectedNode node = new SelectedNode();
 							node.setStatement(stmt);
 							node.setBinding(t);
 							selectedNodes.add(node);
-//						}
+						} 
 					}
 //				}
 			}
@@ -307,11 +307,15 @@ public class SparqlOpVisitor implements OpVisitor {
 //						}
 						if(tempResult>0) {
 							if(count==tempResult/2) {
-//								for(Resource r:path)
-//									System.out.println("\t\tcleared path:"+r);
+//								for(Resource r:path) {
+//									if(blacklist.contains(r)) {
+//										blacklist.remove(r);
+//									}
+//								}
 								//clear the path down the line
 								path.clear();
-								childPath.clear();
+								
+//								childPath.clear();
 //								System.out.println("\n\n"+nextNode);
 							} else {
 								return tempResult;
