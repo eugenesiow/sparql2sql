@@ -64,7 +64,7 @@ public class SparqlOpVisitor implements OpVisitor {
 	
 	RdfTableMapping mapping = null;
 	List<Node> eliminated = new ArrayList<Node>();
-//	List<Resource> traversed = new ArrayList<Resource>();
+	List<Resource> uniTraversed = new ArrayList<Resource>();
 	Set<Resource> blacklist = new HashSet<Resource>();
 	List<SelectedNode> selectedNodes = new ArrayList<SelectedNode>();
 	Map<String,String> varMapping = new HashMap<String,String>();
@@ -102,33 +102,105 @@ public class SparqlOpVisitor implements OpVisitor {
 		return false;
 	}
 
-	private void traverseGraphR(Node startVar, Resource startSubject,
+	private Boolean traverseGraphR(Node startVar, Resource startSubject,
 			List<Triple> triples, Model model, QueryPatterns queryPatterns, List<Node> traversed, String format) {
 		System.out.println(startSubject);
+		uniTraversed.add(startSubject);
+		List<String> trueBranches = new ArrayList<String>();
+		List<String> falseBranches = new ArrayList<String>();
 			//get links
 			for(Triple t:triples) {
-				if(!traversed.contains(t.getSubject())) {
-					traversed.add(t.getSubject());
-					if(t.getSubject().matches(startVar)) {
-						for(Statement stmt:getStatements(startSubject.asNode(),t.getPredicate(),t.getObject(),model)) {
+				if(t.getSubject().matches(startVar)) {
+					for(Statement stmt:getStatements(startSubject.asNode(),t.getPredicate(),t.getObject(),model)) {
+						Resource r = null;
+						if(stmt.getObject().isResource()) {
+							r = stmt.getObject().asResource();
+						}
+						if(!uniTraversed.contains(r)) {
+//							if(stmt.getObject().asResource().getURI().equals("http://knoesis.wright.edu/ssw/System_4UT01")) {
+//								System.out.println("!!!sys uri");
+//								System.out.println(stmt.getObject());
+//								for(Node node:uniTraversed) {
+//									System.out.println("compare:"+node+":"+stmt.getObject()+":"+node.equals(stmt.getObject()));
+//								}
+//								
+//							}
 							if(checkSubject(t,stmt)) {
-								traversed.add(t.getObject());
-								format += "\t";
-								System.out.println(format+stmt);
-								if(stmt.getObject().isResource())
-									traverseGraphR(t.getObject(),stmt.getObject().asResource(),triples,model,queryPatterns,traversed,format);
+								if(stmt.getObject().isResource()) {
+									System.out.println("o:"+stmt);
+//									uniTraversed.add(stmt.getObject().asResource());
+									Boolean result = traverseGraphR(t.getObject(),stmt.getObject().asResource(),triples,model,queryPatterns,traversed,format);
+									if(result) 
+										trueBranches.add(stmt.getPredicate().toString());
+									else 
+										falseBranches.add(stmt.getPredicate().toString());
+								} else {
+									System.out.println("o:hitleaf:"+stmt.getObject());
+									return true;
+								}
+									
 							} else {
-								System.out.println("hitfalse:"+stmt);
-								traversed.clear();
-								return;
+								System.out.println("o:hitfalse");
+								return false;
 							}
 						}
-					} 
-					else if(t.getObject().matches(startVar)) {
-						traversed.clear();
-						System.out.println("\t\tobj"+t);
+					}
+				} else if(t.getObject().matches(startVar)) {
+					for(Statement stmt:getStatements(t.getObject(),t.getPredicate(),startSubject.asNode(),model)) {
+						if(!uniTraversed.contains(stmt.getSubject())) {
+							if(checkObject(t,stmt)) {
+								if(stmt.getObject().isResource()) {
+									System.out.println("s:"+stmt);
+//									uniTraversed.add(stmt.getSubject());
+									Boolean result = traverseGraphR(t.getSubject(),stmt.getSubject(),triples,model,queryPatterns,traversed,format);
+									if(result) 
+										trueBranches.add(stmt.getPredicate().toString());
+									else 
+										falseBranches.add(stmt.getPredicate().toString());
+								} else {
+									System.out.println("s:hitleaf");
+									return true;
+								}									
+							} else {
+								System.out.println("s:hitfalse");
+								return false;
+							}
+						}
 					}
 				}
+				
+//				System.out.println("reach bottom");
+//				if(!traversed.contains(t.getSubject())) {
+//					traversed.add(t.getSubject());
+//					if(t.getSubject().matches(startVar)) {
+//						for(Statement stmt:getStatements(startSubject.asNode(),t.getPredicate(),t.getObject(),model)) {
+//							if(checkSubject(t,stmt)) {
+//								traversed.add(t.getObject());
+//								format += "\t";
+//								System.out.println(format+stmt);
+//								if(stmt.getObject().isResource())
+//									traverseGraphR(t.getObject(),stmt.getObject().asResource(),triples,model,queryPatterns,traversed,format);
+//							} else {
+//								System.out.println("hitfalse:"+stmt);
+//								traversed.clear();
+//								return;
+//							}
+//						}
+//					} 
+//					else if(t.getObject().matches(startVar)) {
+//						traversed.clear();
+//						System.out.println("\t\tobj"+t);
+//					}
+//				}
+			}
+			if(falseBranches.size()==0) 
+				return true;
+			else {
+				for(String falseBranch:falseBranches) {
+					if(!trueBranches.contains(falseBranch))
+						return false;
+				}
+				return true;
 			}
 	}
 
@@ -223,6 +295,7 @@ public class SparqlOpVisitor implements OpVisitor {
 					return true;
 			} else if (objectVar.isURI()) {
 				String uri = objectNode.asResource().getURI();
+//				System.out.println("uri:"+uri);
 				if(uri.contains("{")) {
 					return FormatUtil.compareUriPattern(objectVar.getURI(),uri);
 				} else {
@@ -233,6 +306,37 @@ public class SparqlOpVisitor implements OpVisitor {
 				}
 			} else if (objectVar.isBlank()) {
 				if(!objectNode.isLiteral())
+					return true;
+			}
+			return false;
+		}
+		
+		return true;
+		
+	}
+	
+	private Boolean checkObject(Triple triple, Statement stmt) {
+		Node subjectVar = triple.getSubject();
+//		Node objectVar = triple.getObject();
+		Resource subjectNode = stmt.getSubject();
+//		RDFNode objectNode = stmt.getObject();
+		
+		if(!subjectVar.isVariable()) {
+			if(subjectVar.isLiteral()) {
+				if(subjectNode.isLiteral()) 
+					return true;
+			} else if (subjectVar.isURI()) {
+				String uri = subjectNode.asResource().getURI();
+				if(uri.contains("{")) {
+					return FormatUtil.compareUriPattern(subjectVar.getURI(),uri);
+				} else {
+					if(!uri.equals(subjectVar.getURI()))
+						return false;
+					else
+						return true;
+				}
+			} else if (subjectVar.isBlank()) {
+				if(!subjectNode.isLiteral())
 					return true;
 			}
 			return false;
