@@ -211,6 +211,7 @@ public class SparqlOpVisitor implements OpVisitor {
 		for(Model model:mapping.getMapping()) {
 //			System.out.println("--------------------START MAPPING----------------------");
 			List<Triple> patterns = bgp.getPattern().getList();
+<<<<<<< HEAD
 			QueryPatterns queryPatterns = new QueryPatterns();
 			Resource s = null;
 			RDFNode o = null;
@@ -221,6 +222,50 @@ public class SparqlOpVisitor implements OpVisitor {
 				Statement stmt = stmts.next();
 				if(checkSubject(t,stmt)) {
 					traverseGraphR(t.getSubject(),stmt.getSubject(),patterns,model,queryPatterns,new ArrayList<Node>(),"");
+=======
+			for(Triple t:patterns) {
+				Node subject = t.getSubject(); 
+//				if(!eliminated.contains(subject)) { //check if subject has been eliminated 
+					Node predicate = t.getPredicate();
+					Node object = t.getObject();
+//					System.out.println("pattern:"+t);
+					for(Statement stmt:getStatements(subject,predicate,object,model)) {
+						checkSubject(t,patterns,model,stmt);
+//						System.out.println(stmt);
+						//add statements if not eliminated
+//						if(!blacklist.contains(stmt.getSubject())) {
+//							System.out.println("addnode");
+							SelectedNode node = new SelectedNode();
+							node.setStatement(stmt);
+							node.setBinding(t);
+							selectedNodes.add(node);
+//						}
+					}
+//				}
+			}
+			
+//			System.out.println("-----------");
+			for(SelectedNode n:selectedNodes) {
+				if(n.isLeafValue()) {
+					String modifier = "";
+					if(!whereClause.trim().equals("WHERE")) {
+						modifier = " AND ";
+					}
+					whereClause += modifier + n.getWherePart();
+				} else if(n.isLeafMap()) {
+//					System.out.println(n.getVar() + ":" + n.getTable() + "." + n.getColumn());
+					varMapping.put(n.getVar(), n.getTable() + "." + n.getColumn());
+					tableList.add(n.getTable());
+				} else if(n.isObjectVar) {
+					varMapping.put(n.getVar(), "'" + n.getObjectUri() + "'");
+				}
+				if(n.isSubjectLeafMap()) {
+//					System.out.println(n.getSubjectVar() + ":" + n.getSubjectTable() + "." + n.getSubjectColumn());
+					varMapping.put(n.getSubjectVar(), n.getSubjectTable() + "." + n.getSubjectColumn());
+					tableList.add(n.getSubjectTable());
+				} else if(n.isSubjectVar) {
+					varMapping.put(n.getSubjectVar(), "'" + n.getObjectUri() + "'");
+>>>>>>> parent of 0484696... Final old ago
 				}
 			}
 //			for(Triple t:patterns) {
@@ -315,6 +360,7 @@ public class SparqlOpVisitor implements OpVisitor {
 		
 	}
 	
+<<<<<<< HEAD
 	private Boolean checkObject(Triple triple, Statement stmt) {
 		Node subjectVar = triple.getSubject();
 //		Node objectVar = triple.getObject();
@@ -334,6 +380,83 @@ public class SparqlOpVisitor implements OpVisitor {
 						return false;
 					else
 						return true;
+=======
+	private int eliminateR(Resource subject, List<Resource> validSubjects,
+			Model model, int count, Resource parent, List<Triple> patterns, Node var, List<Resource> path) {
+//		System.out.println("\t"+parent+"->"+subject);
+		traversed.add(subject);
+		
+		if(validSubjects.contains(subject)) {
+			return count;
+		}
+		
+		for(Triple t:patterns) {
+			StmtIterator stmts = null;
+			Node nextVar = null;
+			if(t.subjectMatches(var)) {
+				stmts = model.listStatements(subject,null,(RDFNode)null);
+				nextVar = t.getObject();
+			}
+			else if(t.objectMatches(var)) {
+				stmts = model.listStatements(null,null,subject);
+				nextVar = t.getMatchSubject();
+			}
+			
+			if(stmts!=null) {
+				while(stmts.hasNext()) {
+//					if(count==1) { //create new path for each branch out
+						List<Resource> childPath = new ArrayList<Resource>();
+//					}
+					
+					Statement stmt = stmts.next();
+					Resource nextNode = null;
+					if(t.subjectMatches(var)) {
+						if(!stmt.getObject().isLiteral()) {
+							nextNode = stmt.getObject().asResource();
+						} else {
+							continue;
+						}
+					} else if(t.objectMatches(var)) {
+						nextNode = stmt.getSubject();
+					}
+		//			System.out.println(o.isLiteral() + ":" + o + ":" + subject + ":" + stmt.getPredicate());
+					if(!traversed.contains(nextNode)) {
+						int nextCount = count + 1;
+		//				System.out.println(o);
+						int tempResult = eliminateR(nextNode.asResource(),validSubjects,model,nextCount,subject,patterns,nextVar,childPath);
+						
+//						//on the wind down add the branch
+						path.add(nextNode);
+//						if(path!=null) {
+//							path.add(nextNode);
+//						} else {
+////							System.out.println("path null");
+//							path = new ArrayList<Resource>();
+//							path.add(nextNode);
+//							path.add(subject);
+//							eliminateNodes(path);
+//							path.clear();
+//							path = null;
+//						}
+						if(tempResult>0) {
+							if(count==tempResult/2) {
+//								for(Resource r:path)
+//									System.out.println("\t\tcleared path:"+r);
+								//clear the path down the line
+								path.clear();
+								childPath.clear();
+//								System.out.println("\n\n"+nextNode);
+							} else {
+								return tempResult;
+							}
+						}
+//						if(count==1) {
+						path.addAll(childPath);
+//							path.add(parent);
+							eliminateNodes(path);
+//						}
+					}
+>>>>>>> parent of 0484696... Final old ago
 				}
 			} else if (subjectVar.isBlank()) {
 				if(!subjectNode.isLiteral())
