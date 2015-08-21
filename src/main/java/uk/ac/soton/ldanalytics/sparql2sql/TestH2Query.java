@@ -9,8 +9,6 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 
-import org.apache.commons.csv.CSVFormat;
-import org.apache.commons.csv.CSVPrinter;
 import org.apache.commons.io.FileUtils;
 
 import uk.ac.soton.ldanalytics.sparql2sql.model.RdfTableMapping;
@@ -32,70 +30,64 @@ public class TestH2Query {
 		try {
 			Class.forName("org.h2.Driver");
 			
-			String queryName = "q4";
+			String queryName = "q1";
 			String queryStr = FileUtils.readFileToString(new File(queryPath + queryName + ".sparql"));
 		
-			for(int run = 1;run<=3;run++) {
-	//			int totalCount = 0;
-				BufferedWriter bw = new BufferedWriter(new FileWriter(outputPath + "results_"+queryName+"_run"+run+".csv"));
+			int run = 3;
+			int totalCount = 0;
+			BufferedWriter bw = new BufferedWriter(new FileWriter(outputPath + "results_"+queryName+"_run"+run+".csv"));
+			
+			Query query = QueryFactory.create(queryStr);
+			Op op = Algebra.compile(query);
+//			System.out.println(op);
+		
+			for(File file:folder.listFiles()) {
+				String tempFileName = file.getName();
+				if(tempFileName.startsWith("."))
+					continue;
+				String stationName = tempFileName.replace(".nt", "");
 				
-				Query query = QueryFactory.create(queryStr);
-				Op op = Algebra.compile(query);
-	//			System.out.println(op);
-			
-				for(File file:folder.listFiles()) {
-					String tempFileName = file.getName();
-					if(tempFileName.startsWith("."))
-						continue;
-					String stationName = tempFileName.replace(".nt", "");
-					BufferedWriter bwResults = new BufferedWriter(new FileWriter(outputPath + "/results/h2_"+queryName+"_run"+run+"_"+stationName+".csv"));
-					
-					//as this is a server, it will already be loaded, hence, no need to measure this time
-					RdfTableMapping mapping = new RdfTableMapping();
-					mapping.loadMapping(file.getPath());
-					
-					long startTime = System.currentTimeMillis();
-					SparqlOpVisitor v = new SparqlOpVisitor();
-					v.useMapping(mapping);
-					OpWalker.walk(op,v);
-	//				SQLFormatter formatter = new SQLFormatter();
-					String sql = v.getSQL();
-					long translationTime = System.currentTimeMillis() - startTime;
-					
-					if(!sql.trim().equals("")) {
-						startTime = System.currentTimeMillis();
-						try {
-							Connection conn = DriverManager.getConnection("jdbc:h2:tcp://192.168.0.103/~/h2/LSD_h2_databases/"+stationName, "sa", "");
-							Statement stat = conn.createStatement();
-							ResultSet rs = stat.executeQuery(sql);
-							CSVPrinter printer = new CSVPrinter(bwResults,CSVFormat.DEFAULT);
-							printer.printRecords(rs);
-			
-							// Clean up
-							printer.close();
-							rs.close();
-							conn.close();
-							long executionTime = System.currentTimeMillis() - startTime;
-							bw.append(stationName+","+translationTime+","+executionTime+"\n");
-							bw.flush();
-						} catch(SQLException se) {
-							bw.append(stationName+","+translationTime+",err\n");
-							bw.flush();
-							System.out.println(stationName);
-	//						se.printStackTrace();
+				//as this is a server, it will already be loaded, hence, no need to measure this time
+				RdfTableMapping mapping = new RdfTableMapping();
+				mapping.loadMapping(file.getPath());
+				
+				long startTime = System.currentTimeMillis();
+				SparqlOpVisitor v = new SparqlOpVisitor();
+				v.useMapping(mapping);
+				OpWalker.walk(op,v);
+//				SQLFormatter formatter = new SQLFormatter();
+				String sql = v.getSQL();
+				long translationTime = System.currentTimeMillis() - startTime;
+				
+				if(!sql.trim().equals("")) {
+					startTime = System.currentTimeMillis();
+					try {
+						Connection conn = DriverManager.getConnection("jdbc:h2:tcp://192.168.0.103/~/h2/LSD_h2_databases/"+stationName, "sa", "");
+						Statement stat = conn.createStatement();
+						ResultSet rs = stat.executeQuery(sql);
+						while (rs.next()) {
+							totalCount++;
 						}
-					} else {
-						bw.append(stationName+","+translationTime+",0\n");
+						rs.close();
+						conn.close();
+						long executionTime = System.currentTimeMillis() - startTime;
+						bw.append(stationName+","+translationTime+","+executionTime+"\n");
 						bw.flush();
+					} catch(SQLException se) {
+						bw.append(stationName+","+translationTime+",err\n");
+						bw.flush();
+						System.out.println(stationName);
+//						se.printStackTrace();
 					}
-					
-					bwResults.close();
-					
+				} else {
+					bw.append(stationName+","+translationTime+",0\n");
+					bw.flush();
 				}
-//				System.out.println(totalCount);
-			
-				bw.close();
+				
 			}
+			System.out.println(totalCount);
+			
+			bw.close();
 		} catch (ClassNotFoundException | IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
