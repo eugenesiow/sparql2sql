@@ -92,7 +92,7 @@ public class SparqlOpVisitor implements OpVisitor {
 	
 	public Boolean traverseGraph(Triple t, List<Triple> triples, Model model, QueryPatterns queryPatterns) {
 		System.out.println("pattern:"+t);
-		List<Node> traversed = new ArrayList<Node>();
+		List<Resource> traversed = new ArrayList<Resource>();
 		for(Statement stmt:getStatements(t.getSubject(),t.getPredicate(),t.getObject(),model)) {
 			if(checkSubject(t,stmt)) {
 				System.out.println("start:"+stmt);
@@ -104,21 +104,25 @@ public class SparqlOpVisitor implements OpVisitor {
 	}
 
 	private Boolean traverseGraphR(Node startVar, Resource startSubject,
-			List<Triple> triples, Model model, QueryPatterns queryPatterns, List<Node> traversed, String format) {
+			List<Triple> triples, Model model, QueryPatterns queryPatterns, List<Resource> traversed, String format) {
 		System.out.println(format+"start_sub:"+startSubject);
+		traversed.add(startSubject);
 		uniTraversed.add(startSubject);
 		List<String> trueBranches = new ArrayList<String>();
 		List<String> falseBranches = new ArrayList<String>();
 			//get links
 			for(Triple t:triples) {
+				int count = 0;
 				if(t.getSubject().matches(startVar)) {
 					for(Statement stmt:getStatements(startSubject.asNode(),t.getPredicate(),t.getObject(),model)) {
+						count++;
 						System.out.println(format+stmt);
 						Resource r = null;
 						if(stmt.getObject().isResource()) {
 							r = stmt.getObject().asResource();
 						}
-						if(!uniTraversed.contains(r)) {
+//						if(!uniTraversed.contains(r)) {
+						if(!traversed.contains(r)) {
 //							if(stmt.getObject().asResource().getURI().equals("http://knoesis.wright.edu/ssw/System_4UT01")) {
 //								System.out.println("!!!sys uri");
 //								System.out.println(stmt.getObject());
@@ -131,7 +135,9 @@ public class SparqlOpVisitor implements OpVisitor {
 								if(stmt.getObject().isResource()) {
 									System.out.println(format+"o:"+stmt);
 //									uniTraversed.add(stmt.getObject().asResource());
-									Boolean result = traverseGraphR(t.getObject(),stmt.getObject().asResource(),triples,model,queryPatterns,traversed,format+"\t");
+									List<Resource> newTraversed = new ArrayList<Resource>();
+									newTraversed.addAll(traversed);
+									Boolean result = traverseGraphR(t.getObject(),stmt.getObject().asResource(),triples,model,queryPatterns,newTraversed,format+"\t");
 									if(result) 
 										trueBranches.add(stmt.getPredicate().toString());
 									else 
@@ -148,12 +154,17 @@ public class SparqlOpVisitor implements OpVisitor {
 					}
 				} else if(t.getObject().matches(startVar)) {
 					for(Statement stmt:getStatements(t.getObject(),t.getPredicate(),startSubject.asNode(),model)) {
-						if(!uniTraversed.contains(stmt.getSubject())) {
+						count++;
+//						if(!uniTraversed.contains(stmt.getSubject())) {
+						if(!traversed.contains(stmt.getSubject())) {
 							if(checkObject(t,stmt)) {
 								if(stmt.getObject().isResource()) {
 									System.out.println(format+"s:"+stmt);
 //									uniTraversed.add(stmt.getSubject());
-									Boolean result = traverseGraphR(t.getSubject(),stmt.getSubject(),triples,model,queryPatterns,traversed,format+"\t");
+									List<Resource> newTraversed = new ArrayList<Resource>();
+									newTraversed.addAll(traversed);
+									Boolean result = traverseGraphR(t.getSubject(),stmt.getSubject(),triples,model,queryPatterns,newTraversed,format+"\t");
+									
 									if(result) 
 										trueBranches.add(stmt.getPredicate().toString());
 									else 
@@ -218,7 +229,7 @@ public class SparqlOpVisitor implements OpVisitor {
 			while(stmts.hasNext()) {
 				Statement stmt = stmts.next();
 				if(checkSubject(t,stmt)) {
-					Boolean result = traverseGraphR(t.getSubject(),stmt.getSubject(),patterns,model,queryPatterns,new ArrayList<Node>(),"");
+					Boolean result = traverseGraphR(t.getSubject(),stmt.getSubject(),patterns,model,queryPatterns,new ArrayList<Resource>(),"");
 					System.out.println("final:"+result);
 				}
 			}
@@ -289,8 +300,9 @@ public class SparqlOpVisitor implements OpVisitor {
 		}
 		if(!objectVar.isVariable()) {
 			if(objectVar.isLiteral()) {
-				if(objectNode.isLiteral()) 
+				if(objectNode.isLiteral()) {
 					return true;
+				}
 			} else if (objectVar.isURI()) {
 				String uri = objectNode.asResource().getURI();
 //				System.out.println("uri:"+uri);
