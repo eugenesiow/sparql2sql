@@ -71,6 +71,7 @@ public class SparqlOpVisitor implements OpVisitor {
 	Map<String,String> aliases = new HashMap<String,String>();
 	Set<String> tableList = new HashSet<String>();
 	List<String> previousSelects = new ArrayList<String>();
+	Set<String> traversedNodes = new HashSet<String>();
 	
 //	String previousSelect = "";
 	String selectClause = "SELECT ";
@@ -92,62 +93,107 @@ public class SparqlOpVisitor implements OpVisitor {
 
 	public void visit(OpBGP bgp) {
 		bgpStarted = true;
-		//result is a list of table and its columns to select and the variables they are tied to
 		for(Model model:mapping.getMapping()) {
-//			System.out.println("--------------------START MAPPING----------------------");
 			List<Triple> patterns = bgp.getPattern().getList();
-			for(Triple t:patterns) {
-				Node subject = t.getSubject(); 
-//				if(!eliminated.contains(subject)) { //check if subject has been eliminated 
-					Node predicate = t.getPredicate();
-					Node object = t.getObject();
-//					System.out.println("pattern:"+t);
-					for(Statement stmt:getStatements(subject,predicate,object,model)) {
-						checkSubject(t,patterns,model,stmt);
-//						System.out.println(stmt);
-						//add statements if not eliminated
-						if(!blacklist.contains(stmt.getSubject())) {
-							System.out.println("addnode:"+stmt+":"+t);
-							SelectedNode node = new SelectedNode();
-							node.setStatement(stmt);
-							node.setBinding(t);
-							selectedNodes.add(node);
-						} 
-					}
-//				}
-			}
-			
-//			System.out.println("-----------");
-			for(SelectedNode n:selectedNodes) {
-				if(n.isLeafValue()) {
-					String modifier = "";
-					if(!whereClause.trim().equals("WHERE")) {
-						modifier = " AND ";
-					}
-					whereClause += modifier + n.getWherePart();
-				} else if(n.isLeafMap()) {
-//					System.out.println(n.getVar() + ":" + n.getTable() + "." + n.getColumn());
-					varMapping.put(n.getVar(), n.getTable() + "." + n.getColumn());
-					tableList.add(n.getTable());
-				} else if(n.isObjectVar) {
-					varMapping.put(n.getVar(), "'" + n.getObjectUri() + "'");
-				}
-				if(n.isSubjectLeafMap()) {
-//					System.out.println(n.getSubjectVar() + ":" + n.getSubjectTable() + "." + n.getSubjectColumn());
-					varMapping.put(n.getSubjectVar(), n.getSubjectTable() + "." + n.getSubjectColumn());
-					tableList.add(n.getSubjectTable());
-				} else if(n.isSubjectVar) {
-					varMapping.put(n.getSubjectVar(), "'" + n.getObjectUri() + "'");
-				}
-			}
-			
-//			System.out.println("--------------------END MAPPING----------------------");
-			//clean up
-			blacklist.clear();
-			traversed.clear();
-			eliminated.clear();
+//			for(Triple t:patterns) {
+//				System.out.println("triple:"+t);
+//				graphTraverse(t,model);
+//			}
+			graphTraverse(patterns,patterns.get(0),model);
 		}
 	}
+	
+	public void graphTraverse(List<Triple> patterns, Triple t, Model model) {
+		Node predicate = t.getPredicate();
+		Node object = t.getObject();
+		Node subject = t.getSubject(); 
+		for(Statement stmt:getStatements(subject,predicate,object,model)) {
+			graphTraverseR(patterns,t,model,stmt);
+		}
+	}
+	
+	public Boolean graphTraverseR(List<Triple> patterns, Triple t, Model model, Statement stmt) {
+		for(Triple currentT:patterns) {
+			Node currentS = currentT.getSubject();
+			Node currentP = currentT.getPredicate();
+			Node currentO = currentT.getObject();
+			Node o = t.getObject();
+			if(o.equals(currentS)) {
+				for(Statement sStmt:getStatements(currentS,currentP,currentO,model)) {
+					String nodeStr = sStmt.getSubject().toString()+":"+currentP.toString()+":"+sStmt.getObject().toString();
+					if(!traversedNodes.contains(nodeStr)) {
+						traversedNodes.add(nodeStr);
+						graphTraverseR(patterns,t,model,sStmt);
+						System.out.println("s:"+sStmt);
+					}
+					
+				}
+				
+			}
+			else if(o.equals(currentO) && !currentS.equals(t.getSubject())) {
+				System.out.println("o:"+currentT);
+			}
+		}
+		return true;
+	}
+//	public void visit(OpBGP bgp) {
+//		bgpStarted = true;
+//		//result is a list of table and its columns to select and the variables they are tied to
+//		for(Model model:mapping.getMapping()) {
+////			System.out.println("--------------------START MAPPING----------------------");
+//			List<Triple> patterns = bgp.getPattern().getList();
+//			for(Triple t:patterns) {
+//				Node subject = t.getSubject(); 
+////				if(!eliminated.contains(subject)) { //check if subject has been eliminated 
+//					Node predicate = t.getPredicate();
+//					Node object = t.getObject();
+////					System.out.println("pattern:"+t);
+//					for(Statement stmt:getStatements(subject,predicate,object,model)) {
+//						checkSubject(t,patterns,model,stmt);
+////						System.out.println(stmt);
+//						//add statements if not eliminated
+//						if(!blacklist.contains(stmt.getSubject())) {
+//							System.out.println("addnode:"+stmt+":"+t);
+//							SelectedNode node = new SelectedNode();
+//							node.setStatement(stmt);
+//							node.setBinding(t);
+//							selectedNodes.add(node);
+//						} 
+//					}
+////				}
+//			}
+//			
+////			System.out.println("-----------");
+//			for(SelectedNode n:selectedNodes) {
+//				if(n.isLeafValue()) {
+//					String modifier = "";
+//					if(!whereClause.trim().equals("WHERE")) {
+//						modifier = " AND ";
+//					}
+//					whereClause += modifier + n.getWherePart();
+//				} else if(n.isLeafMap()) {
+////					System.out.println(n.getVar() + ":" + n.getTable() + "." + n.getColumn());
+//					varMapping.put(n.getVar(), n.getTable() + "." + n.getColumn());
+//					tableList.add(n.getTable());
+//				} else if(n.isObjectVar) {
+//					varMapping.put(n.getVar(), "'" + n.getObjectUri() + "'");
+//				}
+//				if(n.isSubjectLeafMap()) {
+////					System.out.println(n.getSubjectVar() + ":" + n.getSubjectTable() + "." + n.getSubjectColumn());
+//					varMapping.put(n.getSubjectVar(), n.getSubjectTable() + "." + n.getSubjectColumn());
+//					tableList.add(n.getSubjectTable());
+//				} else if(n.isSubjectVar) {
+//					varMapping.put(n.getSubjectVar(), "'" + n.getObjectUri() + "'");
+//				}
+//			}
+//			
+////			System.out.println("--------------------END MAPPING----------------------");
+//			//clean up
+//			blacklist.clear();
+//			traversed.clear();
+//			eliminated.clear();
+//		}
+//	}
 
 	private List<Statement> getStatements(Node subject, Node predicate, Node object, Model model) {
 		Resource s = subject.isBlank() ? model.asRDFNode(subject).asResource():null;
