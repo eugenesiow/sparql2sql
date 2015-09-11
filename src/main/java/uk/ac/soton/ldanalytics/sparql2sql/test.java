@@ -154,15 +154,15 @@ public class test {
 				"\n" + 
 				"SELECT ?sensor\n" + 
 				"WHERE {\n" + 
-//				"  ?sensor om-owl:generatedObservation [a weather:SnowfallObservation; om-owl:samplingTime ?instant ] ;\n" +
-//				"          om-owl:generatedObservation ?o1 ;\n" + 				
-				"  ?sensor om-owl:generatedObservation ?o1 ;\n" +
+				"  ?sensor om-owl:generatedObservation [a weather:SnowfallObservation; om-owl:samplingTime ?instant ] ;\n" +
+				"          om-owl:generatedObservation ?o1 ;\n" + 				
+//				"  ?sensor om-owl:generatedObservation ?o1 ;\n" +
 				"          om-owl:generatedObservation ?o2 .\n" + 
 				"  ?o1 a weather:TemperatureObservation ;\n" + 
 				"      om-owl:observedProperty weather:_AirTemperature ;\n" + 
 				"      om-owl:result [om-owl:floatValue ?temperature] ;\n" + 
 				"      om-owl:samplingTime ?instant .\n" + 
-				"  ?o2 a weather:WindObservation ;\n" + 
+				"  ?o2 a weather:WindSpeedObservation ;\n" + 
 				"      om-owl:observedProperty weather:_WindSpeed ;\n" + 
 				"      om-owl:result [om-owl:floatValue ?windSpeed] ;\n" + 
 				"      om-owl:samplingTime ?instant .\n" + 
