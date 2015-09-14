@@ -74,7 +74,12 @@ public class SparqlOpVisitor implements OpVisitor {
 	List<String> previousSelects = new ArrayList<String>();
 	Set<String> traversedNodes = new HashSet<String>();
 	Set<Triple> traversedTriples = new HashSet<Triple>();
-	Set<Node> selNode = new HashSet<Node>();
+//	Set<Node> selNode = new HashSet<Node>();
+//	Set<Node> finalSelNode = new HashSet<Node>();
+	Map<Node,Node> selNodes = new HashMap<Node,Node>();
+	Map<Node,Node> finalSelNodes = new HashMap<Node,Node>();
+//	Set<NodeObj> selNodes = new HashSet<NodeObj>();
+//	Set<NodeObj> finalSelNodes = new HashSet<NodeObj>();
 	
 //	String previousSelect = "";
 	String selectClause = "SELECT ";
@@ -103,8 +108,13 @@ public class SparqlOpVisitor implements OpVisitor {
 //				graphTraverse(t,model);
 //			}
 			for(Triple pattern:patterns) {
+				System.out.println("parentt:"+pattern);
+				traversedNodes.clear();
 				if(!traversedTriples.contains(pattern))
 					graphTraverse(patterns,pattern,model);
+			}
+			for(Entry<Node,Node> n:finalSelNodes.entrySet()) {
+				System.out.println("final:"+n.getKey()+","+n.getValue());
 			}
 		}
 	}
@@ -113,13 +123,31 @@ public class SparqlOpVisitor implements OpVisitor {
 		Node predicate = t.getPredicate();
 		Node object = t.getObject();
 		Node subject = t.getSubject(); 
+		Set<String> results = new HashSet<String>();
 		for(Statement stmt:getStatements(subject,predicate,object,model)) {
 			System.out.println("stmt:"+stmt+",t:"+t);
-			Boolean result = graphTraverseR(patterns,t,model,stmt,"");
-//			if(result==true) {
+			Boolean subResult = graphTraverseR(patterns,t,model,stmt,"");
+			results.add(t.getPredicate()+";"+subResult);
+//			if(subResult==true) {
 //				for(Node sel:selNode)
-////					System.out.println("literal:"+sel);
+//					System.out.println("literal:"+sel);
 //			}
+		}
+		Boolean add = true;
+		for(String resultStr:results) {
+			String[] parts = resultStr.split(";");
+			if(parts.length>1) {
+				if(parts[1].equals("false")) {
+					if(!results.contains(parts[0]+";true")) {
+						add = false;
+					}
+				}
+			}
+		}
+		if(add) {
+//			finalSelNodes.addAll(selNodes);
+			finalSelNodes.putAll(selNodes);
+//			finalSelNode.addAll(selNode);
 		}
 	}
 	
@@ -150,13 +178,15 @@ public class SparqlOpVisitor implements OpVisitor {
 							String nodeStr = sStmt.getSubject().toString()+":"+currentP.toString()+":"+sStmt.getObject().toString();
 							if(!traversedNodes.contains(nodeStr)) {
 								traversedNodes.add(nodeStr);
+//								selNodes.add(new NodeObj(sStmt.getObject().asNode(),currentT.getObject()));
+								selNodes.put(currentT.getObject(), sStmt.getObject().asNode());
 								if(sStmt.getObject().isLiteral()) {
-									selNode.add(sStmt.getObject().asNode());
+//									selNode.add(sStmt.getObject().asNode());
 									System.out.println(fmt+"literal:"+sStmt.getObject()+" t:"+currentT.getObject());
 								} else if(sStmt.getObject().isResource() || sStmt.getObject().isAnon()) {
 									System.out.println(fmt+"s:"+sStmt+" t:"+currentT);
 									Boolean subResult = graphTraverseR(patterns,currentT,model,sStmt,fmt+"\t");
-									results.add(currentT.getPredicate()+":"+subResult);
+									results.add(currentT.getPredicate()+";"+subResult);
 									if(subResult==false)
 										System.out.println("sfalse:"+currentT);
 								}
@@ -201,43 +231,59 @@ public class SparqlOpVisitor implements OpVisitor {
 							String nodeStr = sStmt.getSubject().toString()+":"+currentP.toString()+":"+sStmt.getObject().toString();
 							if(!traversedNodes.contains(nodeStr)) {
 								traversedNodes.add(nodeStr);
+//								selNodes.add(new NodeObj(sStmt.getObject().asNode(),currentT.getObject()));
+								selNodes.put(currentT.getObject(), sStmt.getObject().asNode());
 								if(sStmt.getObject().isLiteral()) {
-									selNode.add(sStmt.getObject().asNode());
-									System.out.println(fmt+"literal:"+sStmt.getObject()+" t:"+currentT.getObject());
+//									selNode.add(sStmt.getObject().asNode());
+									System.out.println(fmt+"literala:"+sStmt.getObject()+" t:"+currentT);
 								} else if(sStmt.getObject().isResource() || sStmt.getObject().isAnon()) {
 									System.out.println(fmt+"s:"+sStmt+" t:"+currentT);
 									Boolean subResult = graphTraverseR(patterns,currentT,model,sStmt,fmt+"\t");
-									results.add(currentT.getPredicate()+":"+subResult);
+									results.add(currentT.getPredicate()+";"+subResult);
 									if(subResult==false)
 										System.out.println("sfalse:"+currentT);
 								}
 							}
-//							if(sStmt.getSubject().isResource() || sStmt.getSubject().isAnon()) {
-//								String nodeStr = sStmt.getSubject().toString()+":"+currentP.toString()+":"+sStmt.getObject().toString();
-//								if(!traversedNodes.contains(nodeStr)) {
-//									currentT = Triple.create(currentT.getObject(), currentT.getPredicate(), currentT.getSubject());
-//									sStmt = model.createStatement(sStmt.getObject().asResource(), sStmt.getPredicate(), model.asRDFNode(sStmt.getSubject().asNode()));
-//									traversedNodes.add(nodeStr);
-//									System.out.println(fmt+"o:"+sStmt+" t:"+currentT);
-//									Boolean subResult = graphTraverseR(patterns,currentT,model,sStmt,fmt+"\t");
-//									results.add(currentT.getPredicate()+":"+subResult);
-//									if(subResult==false)
-//										System.out.println("ofalse:"+currentT);
-//								}
-//							}
 						}
 					}
 //					traversedTriples.add(currentT);
 				}
 			}
+			else if(s.equals(currentO)) {
+				Resource sS = stmt.getSubject();
+				if(sS!=null) {
+					Resource nodeO = null;
+//					System.out.println("o:"+sO+":"+currentS);
+					StmtIterator stmts = model.listStatements(nodeO, model.createProperty(currentP.getURI()), sS);
+					while(stmts.hasNext()) {
+						Statement sStmt = stmts.next();
+						if(!stmt.getObject().equals(sStmt.getObject())) {
+							if(sStmt.getSubject().isResource() || sStmt.getSubject().isAnon()) {
+								String nodeStr = sStmt.getSubject().toString()+":"+currentP.toString()+":"+sStmt.getObject().toString();
+								if(!traversedNodes.contains(nodeStr)) {
+									currentT = Triple.create(currentT.getObject(), currentT.getPredicate(), currentT.getSubject());
+									sStmt = model.createStatement(sStmt.getObject().asResource(), sStmt.getPredicate(), model.asRDFNode(sStmt.getSubject().asNode()));
+									traversedNodes.add(nodeStr);
+									System.out.println(fmt+"o:"+sStmt+" t:"+currentT);
+									Boolean subResult = graphTraverseR(patterns,currentT,model,sStmt,fmt+"\t");
+									results.add(currentT.getPredicate()+";"+subResult);
+									if(subResult==false)
+										System.out.println("ofalse:"+currentT);
+								}
+							}
+						}
+					}
+				}
+			}
 		}
 		for(String resultStr:results) {
 			System.out.println(fmt+"sample:"+resultStr);
-			String[] parts = resultStr.split(":");
+			String[] parts = resultStr.split(";");
 			if(parts.length>1) {
 				if(parts[1].equals("false")) {
-					if(!results.contains(parts[0]+":true")) {
-						selNode.clear();
+					if(!results.contains(parts[0]+";true")) {
+						selNodes.clear();
+//						selNode.clear();
 						return false;
 					}
 				}

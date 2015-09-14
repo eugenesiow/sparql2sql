@@ -12,24 +12,24 @@ import com.hp.hpl.jena.sparql.algebra.OpWalker;
 
 public class test {
 	public static void main(String[] args) {
-//		String queryStr = 
-//				   "PREFIX ssn: <http://purl.oclc.org/NET/ssnx/ssn#>\r\n" + 
-//				   "PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>\r\n" + 
-//				   "PREFIX time: <http://www.w3.org/2006/time#>\r\n" + 
-//				   "PREFIX iotsn: <http://iot.soton.ac.uk/smarthome/sensor#>\r\n" + 
-//				   "PREFIX iot: <http://purl.oclc.org/NET/iot#>\r\n" + 
-//				   "\r\n" + 
-//				   "SELECT (avg(?val) as ?sval) ?hours\r\n" + 
-//				   "WHERE {\r\n" + 
-//				   "  ?instant time:inXSDDateTime ?date.\r\n" + 
-//				   "  ?obs ssn:observationSamplingTime ?instant;\r\n" + 
-//				   "  	ssn:observedBy iotsn:environmental1;\r\n" + 
-//				   "    ssn:observationResult ?snout.\r\n" + 
-//				   "  ?snout ssn:hasValue ?obsval.\r\n" + 
-//				   "  ?obsval a iot:InternalTemperatureValue;\r\n" + 
-//				   "    iot:hasQuantityValue ?val.\r\n" + 
-//				   "  FILTER (?date > \"2012-07-20T00:00:00\"^^xsd:dateTime && ?date < \"2012-07-21T00:00:00\"^^xsd:dateTime)\r\n" + 
-//				   "} GROUP BY (hours(xsd:dateTime(?date)) as ?hours)";
+		String queryStr = 
+				   "PREFIX ssn: <http://purl.oclc.org/NET/ssnx/ssn#>\r\n" + 
+				   "PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>\r\n" + 
+				   "PREFIX time: <http://www.w3.org/2006/time#>\r\n" + 
+				   "PREFIX iotsn: <http://iot.soton.ac.uk/smarthome/sensor#>\r\n" + 
+				   "PREFIX iot: <http://purl.oclc.org/NET/iot#>\r\n" + 
+				   "\r\n" + 
+				   "SELECT (avg(?val) as ?sval) ?hours\r\n" + 
+				   "WHERE {\r\n" + 
+				   "  ?instant time:inXSDDateTime ?date.\r\n" + 
+				   "  ?obs ssn:observationSamplingTime ?instant;\r\n" + 
+				   "  	ssn:observedBy iotsn:environmental1;\r\n" + 
+				   "    ssn:observationResult ?snout.\r\n" + 
+				   "  ?snout ssn:hasValue ?obsval.\r\n" + 
+				   "  ?obsval a iot:InternalTemperatureValue;\r\n" + 
+				   "    iot:hasQuantityValue ?val.\r\n" + 
+				   "  FILTER (?date > \"2012-07-20T00:00:00\"^^xsd:dateTime && ?date < \"2012-07-21T00:00:00\"^^xsd:dateTime)\r\n" + 
+				   "} GROUP BY (hours(xsd:dateTime(?date)) as ?hours)";
 		
 //		String queryStr = "PREFIX  xsd:  <http://www.w3.org/2001/XMLSchema#>\r\n" + 
 //				"PREFIX  iotsn: <http://iot.soton.ac.uk/smarthome/sensor#>\r\n" + 
@@ -147,34 +147,34 @@ public class test {
 //				"  FILTER (?time>\"2003-04-01T00:00:00\"^^xsd:dateTime && ?time<\"2003-04-01T01:00:00\")\n" + 
 //				"}";
 
-		String queryStr = "PREFIX om-owl: <http://knoesis.wright.edu/ssw/ont/sensor-observation.owl#>\n" + 
-				"PREFIX weather: <http://knoesis.wright.edu/ssw/ont/weather.owl#>\n" + 
-				"PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>\n" + 
-				"PREFIX owl-time: <http://www.w3.org/2006/time#>\n" + 
-				"\n" + 
-				"SELECT ?sensor\n" + 
-				"WHERE {\n" + 
-				"  ?sensor om-owl:generatedObservation [a weather:SnowfallObservation; om-owl:samplingTime ?instant ] ;\n" +
-				"          om-owl:generatedObservation ?o1 ;\n" + 				
-//				"  ?sensor om-owl:generatedObservation ?o1 ;\n" +
-				"          om-owl:generatedObservation ?o2 .\n" + 
-				"  ?o1 a weather:TemperatureObservation ;\n" + 
-				"      om-owl:observedProperty weather:_AirTemperature ;\n" + 
-				"      om-owl:result [om-owl:floatValue ?temperature] ;\n" + 
-				"      om-owl:samplingTime ?instant .\n" + 
-				"  ?o2 a weather:WindSpeedObservation ;\n" + 
-				"      om-owl:observedProperty weather:_WindSpeed ;\n" + 
-				"      om-owl:result [om-owl:floatValue ?windSpeed] ;\n" + 
-				"      om-owl:samplingTime ?instant .\n" + 
-				"  ?instant owl-time:inXSDDateTime ?time .\n" + 
-				"  FILTER (?time>\"2013-05-08T13:00:00\"^^xsd:dateTime && ?time<\"2013-05-08T16:00:00\")\n" + 
-				"}\n" + 
-				"GROUP BY ?sensor\n" + 
-				"HAVING ( AVG(?temperature) < \"32\"^^xsd:float  &&  MIN(?windSpeed) > \"40.0\"^^xsd:float ) ";
+//		String queryStr = "PREFIX om-owl: <http://knoesis.wright.edu/ssw/ont/sensor-observation.owl#>\n" + 
+//				"PREFIX weather: <http://knoesis.wright.edu/ssw/ont/weather.owl#>\n" + 
+//				"PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>\n" + 
+//				"PREFIX owl-time: <http://www.w3.org/2006/time#>\n" + 
+//				"\n" + 
+//				"SELECT ?sensor\n" + 
+//				"WHERE {\n" + 
+//				"  ?sensor om-owl:generatedObservation [a weather:SnowfallObservation; om-owl:samplingTime ?instant ] ;\n" +
+//				"          om-owl:generatedObservation ?o1 ;\n" + 				
+////				"  ?sensor om-owl:generatedObservation ?o1 ;\n" +
+//				"          om-owl:generatedObservation ?o2 .\n" + 
+//				"  ?o1 a weather:TemperatureObservation ;\n" + 
+//				"      om-owl:observedProperty weather:_AirTemperature ;\n" + 
+//				"      om-owl:result [om-owl:floatValue ?temperature] ;\n" + 
+//				"      om-owl:samplingTime ?instant .\n" + 
+//				"  ?o2 a weather:WindSpeedObservation ;\n" + 
+//				"      om-owl:observedProperty weather:_WindSpeed ;\n" + 
+//				"      om-owl:result [om-owl:floatValue ?windSpeed] ;\n" + 
+//				"      om-owl:samplingTime ?instant .\n" + 
+//				"  ?instant owl-time:inXSDDateTime ?time .\n" + 
+//				"  FILTER (?time>\"2013-05-08T13:00:00\"^^xsd:dateTime && ?time<\"2013-05-08T16:00:00\")\n" + 
+//				"}\n" + 
+//				"GROUP BY ?sensor\n" + 
+//				"HAVING ( AVG(?temperature) < \"32\"^^xsd:float  &&  MIN(?windSpeed) > \"40.0\"^^xsd:float ) ";
 		
 		RdfTableMapping mapping = new RdfTableMapping();
-		mapping.loadMapping("mapping/4UT01.nt");
-//		mapping.loadMapping("mapping/smarthome_environment.nt");
+//		mapping.loadMapping("mapping/4UT01.nt");
+		mapping.loadMapping("mapping/smarthome_environment.nt");
 //		mapping.loadMapping("mapping/smarthome_meter.nt");
 //		mapping.loadMapping("mapping/smarthome_sensors.nt");
 //		mapping.loadMapping("mapping/smarthome_motion.nt");
