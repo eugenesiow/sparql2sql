@@ -116,10 +116,10 @@ public class SparqlOpVisitor implements OpVisitor {
 		for(Statement stmt:getStatements(subject,predicate,object,model)) {
 			System.out.println("stmt:"+stmt+",t:"+t);
 			Boolean result = graphTraverseR(patterns,t,model,stmt,"");
-			if(result==true) {
-				for(Node sel:selNode)
-					System.out.println("literal:"+sel);
-			}
+//			if(result==true) {
+//				for(Node sel:selNode)
+////					System.out.println("literal:"+sel);
+//			}
 		}
 	}
 	
@@ -129,6 +129,7 @@ public class SparqlOpVisitor implements OpVisitor {
 			Node currentS = currentT.getSubject();
 			Node currentP = currentT.getPredicate();
 			Node currentO = currentT.getObject();
+			Node s = t.getSubject();
 			Node o = t.getObject();
 			Resource sO = stmt.getObject().isResource() ? stmt.getObject().asResource() : null;
 			if(o.equals(currentS)) {
@@ -141,7 +142,7 @@ public class SparqlOpVisitor implements OpVisitor {
 							if(sStmt.getObject().isResource()) {
 								if(!sStmt.getObject().asResource().getURI().equals(currentO.getURI())) {
 //									System.out.println("hitfalse:"+sStmt+" t:"+currentT);
-									traversedTriples.add(currentT);
+//									traversedTriples.add(currentT);
 									return false;
 								}
 							}
@@ -151,7 +152,7 @@ public class SparqlOpVisitor implements OpVisitor {
 								traversedNodes.add(nodeStr);
 								if(sStmt.getObject().isLiteral()) {
 									selNode.add(sStmt.getObject().asNode());
-//									System.out.println(fmt+"literal:"+sStmt.getObject()+" t:"+currentT);
+									System.out.println(fmt+"literal:"+sStmt.getObject()+" t:"+currentT.getObject());
 								} else if(sStmt.getObject().isResource() || sStmt.getObject().isAnon()) {
 									System.out.println(fmt+"s:"+sStmt+" t:"+currentT);
 									Boolean subResult = graphTraverseR(patterns,currentT,model,sStmt,fmt+"\t");
@@ -162,7 +163,7 @@ public class SparqlOpVisitor implements OpVisitor {
 							}
 						}
 					}
-					traversedTriples.add(currentT);
+//					traversedTriples.add(currentT);
 				}
 				
 //				for(Statement sStmt:getStatements(currentS,currentP,currentO,model)) {
@@ -179,37 +180,54 @@ public class SparqlOpVisitor implements OpVisitor {
 //				}
 				
 			}
-			else if(o.equals(currentO) && !currentS.equals(t.getSubject())) {
-				if(sO!=null) {
-					Resource nodeS = null;
+			else if(s.equals(currentS) && !o.equals(currentO)) {
+				Resource sS = stmt.getSubject();
+				if(sS!=null) {
+					Resource nodeO = null;
 //					System.out.println("o:"+sO+":"+currentS);
-					StmtIterator stmts = model.listStatements(nodeS, model.createProperty(currentP.getURI()), model.asRDFNode(sO.asNode()));
+					StmtIterator stmts = model.listStatements(sS, model.createProperty(currentP.getURI()), nodeO);
 					while(stmts.hasNext()) {
 						Statement sStmt = stmts.next();
-						if(currentS.isURI()) {
-							if(sStmt.getSubject().isResource()) {
-								if(!sStmt.getSubject().asResource().getURI().equals(currentS.getURI())) {
-									traversedTriples.add(Triple.create(currentT.getSubject(), currentT.getPredicate(), currentT.getObject()));
+//						System.out.println(sStmt);
+						if(currentO.isURI()) {
+							if(sStmt.getObject().isResource()) {
+								if(!sStmt.getObject().asResource().getURI().equals(currentO.getURI())) {
+//									System.out.println("hitfalse:"+sStmt+" t:"+currentT);
+//									traversedTriples.add(currentT);
 									return false;
 								}
 							}
-						} else if(currentS.isVariable()) {
-							if(sStmt.getSubject().isResource() || sStmt.getSubject().isAnon()) {
-								String nodeStr = sStmt.getSubject().toString()+":"+currentP.toString()+":"+sStmt.getObject().toString();
-								if(!traversedNodes.contains(nodeStr)) {
-									currentT = Triple.create(currentT.getObject(), currentT.getPredicate(), currentT.getSubject());
-									sStmt = model.createStatement(sStmt.getObject().asResource(), sStmt.getPredicate(), model.asRDFNode(sStmt.getSubject().asNode()));
-									traversedNodes.add(nodeStr);
-									System.out.println(fmt+"o:"+sStmt+" t:"+currentT);
+						} else if(currentO.isVariable()) {
+							String nodeStr = sStmt.getSubject().toString()+":"+currentP.toString()+":"+sStmt.getObject().toString();
+							if(!traversedNodes.contains(nodeStr)) {
+								traversedNodes.add(nodeStr);
+								if(sStmt.getObject().isLiteral()) {
+									selNode.add(sStmt.getObject().asNode());
+									System.out.println(fmt+"literal:"+sStmt.getObject()+" t:"+currentT.getObject());
+								} else if(sStmt.getObject().isResource() || sStmt.getObject().isAnon()) {
+									System.out.println(fmt+"s:"+sStmt+" t:"+currentT);
 									Boolean subResult = graphTraverseR(patterns,currentT,model,sStmt,fmt+"\t");
 									results.add(currentT.getPredicate()+":"+subResult);
 									if(subResult==false)
-										System.out.println("ofalse:"+currentT);
+										System.out.println("sfalse:"+currentT);
 								}
 							}
+//							if(sStmt.getSubject().isResource() || sStmt.getSubject().isAnon()) {
+//								String nodeStr = sStmt.getSubject().toString()+":"+currentP.toString()+":"+sStmt.getObject().toString();
+//								if(!traversedNodes.contains(nodeStr)) {
+//									currentT = Triple.create(currentT.getObject(), currentT.getPredicate(), currentT.getSubject());
+//									sStmt = model.createStatement(sStmt.getObject().asResource(), sStmt.getPredicate(), model.asRDFNode(sStmt.getSubject().asNode()));
+//									traversedNodes.add(nodeStr);
+//									System.out.println(fmt+"o:"+sStmt+" t:"+currentT);
+//									Boolean subResult = graphTraverseR(patterns,currentT,model,sStmt,fmt+"\t");
+//									results.add(currentT.getPredicate()+":"+subResult);
+//									if(subResult==false)
+//										System.out.println("ofalse:"+currentT);
+//								}
+//							}
 						}
 					}
-					traversedTriples.add(currentT);
+//					traversedTriples.add(currentT);
 				}
 			}
 		}
