@@ -26,6 +26,10 @@ public class SelectedNode {
 	String subjectUri = "";
 	String objectUri = "";
 	
+	public Triple getBinding() {
+		return pattern;
+	}
+	
 	public Resource getSubject() {
 		Resource subject = null;
 		if(stmt!=null)
@@ -149,7 +153,7 @@ public class SelectedNode {
 	}
 	
 	public String toString() {
-		return stmt.toString();
+		return stmt.toString() + ":" + pattern.toString();
 	}
 		
 	

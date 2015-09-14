@@ -4,11 +4,12 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Queue;
 import java.util.Set;
-import java.util.TreeSet;
 
 import uk.ac.soton.ldanalytics.sparql2sql.util.FormatUtil;
 
@@ -109,7 +110,7 @@ public class SparqlOpVisitor implements OpVisitor {
 //				graphTraverse(t,model);
 //			}
 			for(Triple pattern:patterns) {
-//				System.out.println("parentt:"+pattern);
+				System.out.println("parentt:"+pattern);
 				traversedNodes.clear();
 				if(!traversedTriples.contains(pattern))
 					graphTraverse(patterns,pattern,model);
@@ -117,6 +118,50 @@ public class SparqlOpVisitor implements OpVisitor {
 //			for(Entry<Node,Node> n:finalSelNodes.entrySet()) {
 //				System.out.println("final:"+n.getKey()+","+n.getValue());
 //			}
+			
+			//eliminate phase
+			Set<Triple> missingTriples = new HashSet<Triple>();
+			for(Triple pattern:patterns) {
+				Boolean isNotRepresented = true;
+				for(SelectedNode n:selectedNodes) {
+					if(n.getBinding().equals(pattern)) {
+						isNotRepresented = false;
+						break;
+					}
+				}
+				if(isNotRepresented)
+					missingTriples.add(pattern);
+			}
+			Queue<Triple> search = new LinkedList<Triple>();
+			Set<Triple> removeList = new HashSet<Triple>();		
+			
+			for(Triple t:missingTriples) {
+				search.add(t);
+				removeList.add(t);
+			}
+				
+				
+			while(!search.isEmpty()) {
+				Triple t = search.poll();
+				for(Triple pattern:patterns) {
+					if(pattern.getSubject().equals(t.getObject()) || pattern.getObject().equals(t.getSubject())) {
+						if(!removeList.contains(pattern)) {
+							search.add(pattern);
+							removeList.add(pattern);
+						}
+					}
+				}
+			}
+			
+			for(Triple t:removeList) {
+				for (Iterator<SelectedNode> iterator = selectedNodes.iterator(); iterator.hasNext();) {
+					SelectedNode n = iterator.next();
+				    if (n.getBinding().equals(t)) {
+				        iterator.remove();
+				    }
+				}
+			}
+			
 			for(SelectedNode n:selectedNodes) {
 				if(n.isLeafValue()) {
 					String modifier = "";
@@ -139,6 +184,7 @@ public class SparqlOpVisitor implements OpVisitor {
 					varMapping.put(n.getSubjectVar(), "'" + n.getSubjectUri() + "'");
 				}
 			}
+			
 		}
 	}
 	
@@ -149,31 +195,43 @@ public class SparqlOpVisitor implements OpVisitor {
 		Set<String> results = new HashSet<String>();
 		for(Statement stmt:getStatements(subject,predicate,object,model)) {
 			System.out.println("stmt:"+stmt+",t:"+t);
+			//TODO:check
+			SelectedNode node = new SelectedNode();
+			node.setStatement(stmt);
+			node.setBinding(t);
+			selectedNodes.add(node);
+			//endTODO
 			Boolean subResult = graphTraverseR(patterns,t,model,stmt,"");
-			results.add(t.getPredicate()+";"+subResult);
-			if(subResult==true) {
-				SelectedNode node = new SelectedNode();
-				node.setStatement(stmt);
-				node.setBinding(t);
-				selectedNodes.add(node);
-			}
+			results.add(t.getPredicate()+"|"+t.getObject()+";"+subResult);
+//			if(subResult) {
+//				SelectedNode node = new SelectedNode();
+//				node.setStatement(stmt);
+//				node.setBinding(t);
+//				selectedNodes.add(node);
+//			}
+//			System.out.println(t.getPredicate()+"|"+t.getObject()+";"+subResult);
 		}
 		Boolean add = true;
 		for(String resultStr:results) {
+			System.out.println("samplemain:"+resultStr);
 			String[] parts = resultStr.split(";");
 			if(parts.length>1) {
 				if(parts[1].equals("false")) {
 					if(!results.contains(parts[0]+";true")) {
+//						System.out.println("samplemain:ex");
 						add = false;
 					}
 				}
 			}
 		}
 		if(add) {
+			System.out.println("add"+tempSelectedNodes.size());
 //			finalSelNodes.addAll(selNodes);
 //			finalSelNodes.putAll(selNodes);
 			selectedNodes.addAll(tempSelectedNodes);
 //			finalSelNode.addAll(selNode);
+		} else {
+			tempSelectedNodes.clear();
 		}
 	}
 	
@@ -195,7 +253,7 @@ public class SparqlOpVisitor implements OpVisitor {
 						if(currentO.isURI()) {
 							if(sStmt.getObject().isResource()) {
 								if(!sStmt.getObject().asResource().getURI().equals(currentO.getURI())) {
-//									System.out.println("hitfalse:"+sStmt+" t:"+currentT);
+//									System.out.println(fmt+"hitfalse:"+sStmt+" t:"+currentT);
 //									traversedTriples.add(currentT);
 									return false;
 								}
@@ -216,9 +274,9 @@ public class SparqlOpVisitor implements OpVisitor {
 								} else if(sStmt.getObject().isResource() || sStmt.getObject().isAnon()) {
 									System.out.println(fmt+"s:"+sStmt+" t:"+currentT);
 									Boolean subResult = graphTraverseR(patterns,currentT,model,sStmt,fmt+"\t");
-									results.add(currentT.getPredicate()+";"+subResult);
+									results.add(currentT.getPredicate()+"|"+currentT.getObject()+";"+subResult);
 									if(subResult==false)
-										System.out.println("sfalse:"+currentT);
+										System.out.println(fmt+"sfalse:"+currentT);
 								}
 							}
 						}
@@ -273,9 +331,9 @@ public class SparqlOpVisitor implements OpVisitor {
 								} else if(sStmt.getObject().isResource() || sStmt.getObject().isAnon()) {
 									System.out.println(fmt+"s:"+sStmt+" t:"+currentT);
 									Boolean subResult = graphTraverseR(patterns,currentT,model,sStmt,fmt+"\t");
-									results.add(currentT.getPredicate()+";"+subResult);
+									results.add(currentT.getPredicate()+"|"+currentT.getObject()+";"+subResult);
 									if(subResult==false)
-										System.out.println("sfalse:"+currentT);
+										System.out.println(fmt+"pfalse:"+currentT);
 								}
 							}
 						}
@@ -300,13 +358,14 @@ public class SparqlOpVisitor implements OpVisitor {
 									traversedNodes.add(nodeStr);
 									System.out.println(fmt+"o:"+sStmt+" t:"+currentT);
 									Boolean subResult = graphTraverseR(patterns,currentT,model,sStmt,fmt+"\t");
-									results.add(currentT.getPredicate()+";"+subResult);
+									results.add(currentT.getPredicate()+"|"+currentT.getObject()+";"+subResult);
 									if(subResult==false)
-										System.out.println("ofalse:"+currentT);
+										System.out.println(fmt+"ofalse:"+currentT);
 								}
 							}
 						}
 					}
+//					traversedTriples.add(currentT);
 				}
 			}
 		}
@@ -316,6 +375,7 @@ public class SparqlOpVisitor implements OpVisitor {
 			if(parts.length>1) {
 				if(parts[1].equals("false")) {
 					if(!results.contains(parts[0]+";true")) {
+//						System.out.println("hitsthis");
 //						selNodes.clear();
 						tempSelectedNodes.clear();
 //						selNode.clear();
