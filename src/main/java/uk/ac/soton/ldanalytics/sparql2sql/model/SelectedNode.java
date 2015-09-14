@@ -147,6 +147,10 @@ public class SelectedNode {
 		}
 		return var;
 	}
+	
+	public String toString() {
+		return stmt.toString();
+	}
 		
 	
 //	@Override
