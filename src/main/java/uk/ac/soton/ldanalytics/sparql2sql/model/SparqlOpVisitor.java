@@ -83,6 +83,8 @@ public class SparqlOpVisitor implements OpVisitor {
 //	Set<NodeObj> selNodes = new HashSet<NodeObj>();
 //	Set<NodeObj> finalSelNodes = new HashSet<NodeObj>();
 	List<List<SelectedNode>> allSelectedNodes = new ArrayList<List<SelectedNode>>();
+	List<String> filterList = new ArrayList<String>();
+	List<String> unionList = new ArrayList<String>();
 	
 //	String previousSelect = "";
 	String selectClause = "SELECT ";
@@ -498,8 +500,9 @@ public class SparqlOpVisitor implements OpVisitor {
 	}
 
 	public void visit(OpFilter filters) {
+		String filterStr = "";
+//		System.out.println(allSelectedNodes.get(allSelectedNodes.size()-1).size());
 //		System.out.println("Filter");	
-		
 		for(Expr filter:filters.getExprs().getList()) {
 			SparqlFilterExprVisitor v = new SparqlFilterExprVisitor();
 			v.setMapping(varMapping);
@@ -507,10 +510,14 @@ public class SparqlOpVisitor implements OpVisitor {
 			v.finishVisit();
 			String modifier = "";
 			if(!v.getExpression().equals("")) {
-				if(!whereClause.equals("WHERE ")) {
+//				if(!whereClause.equals("WHERE ")) {
+//					modifier = " AND ";
+//				}
+				if(!filterStr.equals("")) {
 					modifier = " AND ";
 				}
-				whereClause += modifier + v.getExpression();
+				filterStr += modifier + v.getExpression();
+//				whereClause += modifier + v.getExpression();
 			} else if(!v.getHavingExpression().equals("")) {
 				if(!havingClause.equals("HAVING ")) {
 					modifier = " AND ";
@@ -518,6 +525,7 @@ public class SparqlOpVisitor implements OpVisitor {
 				havingClause += modifier + v.getHavingExpression();
 			}
 		}
+		filterList.add(filterStr);
 		
 //		System.out.println(whereClause);
 	}
@@ -594,8 +602,28 @@ public class SparqlOpVisitor implements OpVisitor {
 	}
 
 	public void visit(OpUnion arg0) {
-		// TODO Auto-generated method stub
-		
+		int index = allSelectedNodes.size()-1;
+		int whereIndex = filterList.size()-1;
+		if(unionList.isEmpty()) {
+			List<SelectedNode> sel = allSelectedNodes.get(index-1);
+			if(!sel.isEmpty()) {
+				String unionStr = "SELECT * FROM ";
+				for(String tables:tableList)
+					unionStr += tables + " ";
+				unionStr += " WHERE "+filterList.get(whereIndex);
+				unionList.add(unionStr);
+			}
+		}
+		List<SelectedNode> sel = allSelectedNodes.get(index);
+		if(!sel.isEmpty()) {
+			String unionStr = "SELECT * FROM ";
+			for(String tables:tableList)
+				unionStr += tables + " ";
+			unionStr += " WHERE "+filterList.get(whereIndex);
+			unionList.add(unionStr);
+//			System.out.println(unionStr);
+		}
+		filterList.clear();
 	}
 
 	public void visit(OpDiff arg0) {
@@ -640,6 +668,14 @@ public class SparqlOpVisitor implements OpVisitor {
 
 	public void visit(OpProject arg0) {
 		
+		//build filters
+		for(String filterStr:filterList) {
+			String modifier = "";
+			if(!whereClause.equals("WHERE ")) {
+				modifier = " AND ";
+			}
+			whereClause += modifier + filterStr;
+		}
 		
 		if(tableList.size()>1) {
 //			System.out.println("joins required");
@@ -729,6 +765,23 @@ public class SparqlOpVisitor implements OpVisitor {
 //				count--;
 			}
 		}
+		
+		//has union
+		if(!unionList.isEmpty()) {
+			String unionStr = "";
+			if(!fromClause.trim().equals("FROM")) {
+				fromClause += " , ";
+			}
+			for(String union:unionList) {
+				String modifier = "";
+				if(!unionStr.equals(""))
+					modifier = " UNION ";
+				unionStr += modifier + union;
+			}
+//			System.out.println(unionStr);
+ 			fromClause += " (" + unionStr + ") ";
+		}
+		
 //		System.out.println(selectClause);
 //		previousSelect = formatSQL();
 		if(bgpStarted==true) {
