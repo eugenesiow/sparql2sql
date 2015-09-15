@@ -30,10 +30,10 @@ public class TestH2Query {
 		try {
 			Class.forName("org.h2.Driver");
 			
-			String queryName = "q1";
+			String queryName = "q3";
 			String queryStr = FileUtils.readFileToString(new File(queryPath + queryName + ".sparql"));
 		
-			int run = 3;
+			int run = 1;
 			int totalCount = 0;
 			BufferedWriter bw = new BufferedWriter(new FileWriter(outputPath + "results_"+queryName+"_run"+run+".csv"));
 			

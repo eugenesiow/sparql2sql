@@ -110,7 +110,7 @@ public class SparqlOpVisitor implements OpVisitor {
 //				graphTraverse(t,model);
 //			}
 			for(Triple pattern:patterns) {
-//				System.out.println("parentt:"+pattern);
+				System.out.println("parentt:"+pattern);
 				traversedNodes.clear();
 				if(!traversedTriples.contains(pattern))
 					graphTraverse(patterns,pattern,model);
@@ -269,16 +269,16 @@ public class SparqlOpVisitor implements OpVisitor {
 								node.setBinding(currentT);;
 								tempSelectedNodes.add(node);
 								if(sStmt.getObject().isResource() || sStmt.getObject().isAnon()) {
-//									System.out.println(fmt+"s:"+sStmt+" t:"+currentT);
+									System.out.println(fmt+"s:"+sStmt+" t:"+currentT);
 									Boolean subResult = graphTraverseR(patterns,currentT,model,sStmt,fmt+"\t");
 									results.add(currentT.getPredicate()+"|"+currentT.getObject()+";"+subResult);
 //									if(subResult==false)
 //										System.out.println(fmt+"sfalse:"+currentT);
 								}
-//								else if(sStmt.getObject().isLiteral()) {
-////									selNode.add(sStmt.getObject().asNode());
-//									System.out.println(fmt+"literal:"+sStmt.getObject()+" t:"+currentT.getObject());
-//								}
+								else if(sStmt.getObject().isLiteral()) {
+//									selNode.add(sStmt.getObject().asNode());
+									System.out.println(fmt+"literal:"+sStmt.getObject()+" t:"+currentT.getObject());
+								}
 							}
 						}
 					}
@@ -314,16 +314,16 @@ public class SparqlOpVisitor implements OpVisitor {
 								node.setBinding(currentT);;
 								tempSelectedNodes.add(node);
 								if(sStmt.getObject().isResource() || sStmt.getObject().isAnon()) {
-//									System.out.println(fmt+"s:"+sStmt+" t:"+currentT);
+									System.out.println(fmt+"s:"+sStmt+" t:"+currentT);
 									Boolean subResult = graphTraverseR(patterns,currentT,model,sStmt,fmt+"\t");
 									results.add(currentT.getPredicate()+"|"+currentT.getObject()+";"+subResult);
 //									if(subResult==false)
 //										System.out.println(fmt+"pfalse:"+currentT);
 								} 
-//								else if(sStmt.getObject().isLiteral()) {
-////									selNode.add(sStmt.getObject().asNode());
-//									System.out.println(fmt+"literala:"+sStmt.getObject()+" t:"+currentT);
-//								}
+								else if(sStmt.getObject().isLiteral()) {
+//									selNode.add(sStmt.getObject().asNode());
+									System.out.println(fmt+"literala:"+sStmt.getObject()+" t:"+currentT);
+								}
 							}
 						}
 					}
@@ -345,7 +345,7 @@ public class SparqlOpVisitor implements OpVisitor {
 									currentT = Triple.create(currentT.getObject(), currentT.getPredicate(), currentT.getSubject());
 									sStmt = model.createStatement(sStmt.getObject().asResource(), sStmt.getPredicate(), model.asRDFNode(sStmt.getSubject().asNode()));
 									traversedNodes.add(nodeStr);
-//									System.out.println(fmt+"o:"+sStmt+" t:"+currentT);
+									System.out.println(fmt+"o:"+sStmt+" t:"+currentT);
 									Boolean subResult = graphTraverseR(patterns,currentT,model,sStmt,fmt+"\t");
 									results.add(currentT.getPredicate()+"|"+currentT.getObject()+";"+subResult);
 //									if(subResult==false)
@@ -359,7 +359,7 @@ public class SparqlOpVisitor implements OpVisitor {
 			}
 		}
 		for(String resultStr:results) {
-//			System.out.println(fmt+"sample:"+resultStr);
+			System.out.println(fmt+"sample:"+resultStr);
 			String[] parts = resultStr.split(";");
 			if(parts.length>1) {
 				if(parts[1].equals("false")) {
