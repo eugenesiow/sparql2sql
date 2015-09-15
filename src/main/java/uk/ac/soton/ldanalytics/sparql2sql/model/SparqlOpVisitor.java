@@ -110,7 +110,7 @@ public class SparqlOpVisitor implements OpVisitor {
 //				graphTraverse(t,model);
 //			}
 			for(Triple pattern:patterns) {
-				System.out.println("parentt:"+pattern);
+//				System.out.println("parentt:"+pattern);
 				traversedNodes.clear();
 				if(!traversedTriples.contains(pattern))
 					graphTraverse(patterns,pattern,model);
@@ -194,7 +194,7 @@ public class SparqlOpVisitor implements OpVisitor {
 		Node subject = t.getSubject(); 
 		Set<String> results = new HashSet<String>();
 		for(Statement stmt:getStatements(subject,predicate,object,model)) {
-			System.out.println("stmt:"+stmt+",t:"+t);
+//			System.out.println("stmt:"+stmt+",t:"+t);
 			//TODO:check
 			SelectedNode node = new SelectedNode();
 			node.setStatement(stmt);
@@ -213,7 +213,7 @@ public class SparqlOpVisitor implements OpVisitor {
 		}
 		Boolean add = true;
 		for(String resultStr:results) {
-			System.out.println("samplemain:"+resultStr);
+//			System.out.println("samplemain:"+resultStr);
 			String[] parts = resultStr.split(";");
 			if(parts.length>1) {
 				if(parts[1].equals("false")) {
@@ -225,7 +225,7 @@ public class SparqlOpVisitor implements OpVisitor {
 			}
 		}
 		if(add) {
-			System.out.println("add"+tempSelectedNodes.size());
+//			System.out.println("add"+tempSelectedNodes.size());
 //			finalSelNodes.addAll(selNodes);
 //			finalSelNodes.putAll(selNodes);
 			selectedNodes.addAll(tempSelectedNodes);
@@ -268,34 +268,22 @@ public class SparqlOpVisitor implements OpVisitor {
 								node.setStatement(sStmt);
 								node.setBinding(currentT);;
 								tempSelectedNodes.add(node);
-								if(sStmt.getObject().isLiteral()) {
-//									selNode.add(sStmt.getObject().asNode());
-									System.out.println(fmt+"literal:"+sStmt.getObject()+" t:"+currentT.getObject());
-								} else if(sStmt.getObject().isResource() || sStmt.getObject().isAnon()) {
-									System.out.println(fmt+"s:"+sStmt+" t:"+currentT);
+								if(sStmt.getObject().isResource() || sStmt.getObject().isAnon()) {
+//									System.out.println(fmt+"s:"+sStmt+" t:"+currentT);
 									Boolean subResult = graphTraverseR(patterns,currentT,model,sStmt,fmt+"\t");
 									results.add(currentT.getPredicate()+"|"+currentT.getObject()+";"+subResult);
-									if(subResult==false)
-										System.out.println(fmt+"sfalse:"+currentT);
+//									if(subResult==false)
+//										System.out.println(fmt+"sfalse:"+currentT);
 								}
+//								else if(sStmt.getObject().isLiteral()) {
+////									selNode.add(sStmt.getObject().asNode());
+//									System.out.println(fmt+"literal:"+sStmt.getObject()+" t:"+currentT.getObject());
+//								}
 							}
 						}
 					}
 //					traversedTriples.add(currentT);
 				}
-				
-//				for(Statement sStmt:getStatements(currentS,currentP,currentO,model)) {
-//					System.out.println(fmt+"-"+sStmt+" o:"+o+" t:"+currentT);
-//					if(sO.equals(sStmt.getSubject())) {
-//						String nodeStr = sStmt.getSubject().toString()+":"+currentP.toString()+":"+sStmt.getObject().toString();
-//						if(!traversedNodes.contains(nodeStr)) {
-//							traversedNodes.add(nodeStr);
-//							System.out.println(fmt+"s:"+sStmt);
-//							graphTraverseR(patterns,currentT,model,sStmt,fmt+"\t");
-//							
-//						}
-//					}
-//				}
 				
 			}
 			else if(s.equals(currentS) && !o.equals(currentO)) {
@@ -325,16 +313,17 @@ public class SparqlOpVisitor implements OpVisitor {
 								node.setStatement(sStmt);
 								node.setBinding(currentT);;
 								tempSelectedNodes.add(node);
-								if(sStmt.getObject().isLiteral()) {
-//									selNode.add(sStmt.getObject().asNode());
-									System.out.println(fmt+"literala:"+sStmt.getObject()+" t:"+currentT);
-								} else if(sStmt.getObject().isResource() || sStmt.getObject().isAnon()) {
-									System.out.println(fmt+"s:"+sStmt+" t:"+currentT);
+								if(sStmt.getObject().isResource() || sStmt.getObject().isAnon()) {
+//									System.out.println(fmt+"s:"+sStmt+" t:"+currentT);
 									Boolean subResult = graphTraverseR(patterns,currentT,model,sStmt,fmt+"\t");
 									results.add(currentT.getPredicate()+"|"+currentT.getObject()+";"+subResult);
-									if(subResult==false)
-										System.out.println(fmt+"pfalse:"+currentT);
-								}
+//									if(subResult==false)
+//										System.out.println(fmt+"pfalse:"+currentT);
+								} 
+//								else if(sStmt.getObject().isLiteral()) {
+////									selNode.add(sStmt.getObject().asNode());
+//									System.out.println(fmt+"literala:"+sStmt.getObject()+" t:"+currentT);
+//								}
 							}
 						}
 					}
@@ -356,11 +345,11 @@ public class SparqlOpVisitor implements OpVisitor {
 									currentT = Triple.create(currentT.getObject(), currentT.getPredicate(), currentT.getSubject());
 									sStmt = model.createStatement(sStmt.getObject().asResource(), sStmt.getPredicate(), model.asRDFNode(sStmt.getSubject().asNode()));
 									traversedNodes.add(nodeStr);
-									System.out.println(fmt+"o:"+sStmt+" t:"+currentT);
+//									System.out.println(fmt+"o:"+sStmt+" t:"+currentT);
 									Boolean subResult = graphTraverseR(patterns,currentT,model,sStmt,fmt+"\t");
 									results.add(currentT.getPredicate()+"|"+currentT.getObject()+";"+subResult);
-									if(subResult==false)
-										System.out.println(fmt+"ofalse:"+currentT);
+//									if(subResult==false)
+//										System.out.println(fmt+"ofalse:"+currentT);
 								}
 							}
 						}
@@ -370,7 +359,7 @@ public class SparqlOpVisitor implements OpVisitor {
 			}
 		}
 		for(String resultStr:results) {
-			System.out.println(fmt+"sample:"+resultStr);
+//			System.out.println(fmt+"sample:"+resultStr);
 			String[] parts = resultStr.split(";");
 			if(parts.length>1) {
 				if(parts[1].equals("false")) {
@@ -384,67 +373,9 @@ public class SparqlOpVisitor implements OpVisitor {
 				}
 			}
 		}
-		System.out.println(fmt+"--");
+//		System.out.println(fmt+"--");
 		return true;
 	}
-//	public void visit(OpBGP bgp) {
-//		bgpStarted = true;
-//		//result is a list of table and its columns to select and the variables they are tied to
-//		for(Model model:mapping.getMapping()) {
-////			System.out.println("--------------------START MAPPING----------------------");
-//			List<Triple> patterns = bgp.getPattern().getList();
-//			for(Triple t:patterns) {
-//				Node subject = t.getSubject(); 
-////				if(!eliminated.contains(subject)) { //check if subject has been eliminated 
-//					Node predicate = t.getPredicate();
-//					Node object = t.getObject();
-////					System.out.println("pattern:"+t);
-//					for(Statement stmt:getStatements(subject,predicate,object,model)) {
-//						checkSubject(t,patterns,model,stmt);
-////						System.out.println(stmt);
-//						//add statements if not eliminated
-//						if(!blacklist.contains(stmt.getSubject())) {
-//							System.out.println("addnode:"+stmt+":"+t);
-//							SelectedNode node = new SelectedNode();
-//							node.setStatement(stmt);
-//							node.setBinding(t);
-//							selectedNodes.add(node);
-//						} 
-//					}
-////				}
-//			}
-//			
-////			System.out.println("-----------");
-//			for(SelectedNode n:selectedNodes) {
-//				if(n.isLeafValue()) {
-//					String modifier = "";
-//					if(!whereClause.trim().equals("WHERE")) {
-//						modifier = " AND ";
-//					}
-//					whereClause += modifier + n.getWherePart();
-//				} else if(n.isLeafMap()) {
-////					System.out.println(n.getVar() + ":" + n.getTable() + "." + n.getColumn());
-//					varMapping.put(n.getVar(), n.getTable() + "." + n.getColumn());
-//					tableList.add(n.getTable());
-//				} else if(n.isObjectVar) {
-//					varMapping.put(n.getVar(), "'" + n.getObjectUri() + "'");
-//				}
-//				if(n.isSubjectLeafMap()) {
-////					System.out.println(n.getSubjectVar() + ":" + n.getSubjectTable() + "." + n.getSubjectColumn());
-//					varMapping.put(n.getSubjectVar(), n.getSubjectTable() + "." + n.getSubjectColumn());
-//					tableList.add(n.getSubjectTable());
-//				} else if(n.isSubjectVar) {
-//					varMapping.put(n.getSubjectVar(), "'" + n.getObjectUri() + "'");
-//				}
-//			}
-//			
-////			System.out.println("--------------------END MAPPING----------------------");
-//			//clean up
-//			blacklist.clear();
-//			traversed.clear();
-//			eliminated.clear();
-//		}
-//	}
 
 	private List<Statement> getStatements(Node subject, Node predicate, Node object, Model model) {
 		Resource s = subject.isBlank() ? model.asRDFNode(subject).asResource():null;
@@ -490,206 +421,6 @@ public class SparqlOpVisitor implements OpVisitor {
 		}
 		return stmtList;
 	}
-
-	private void checkSubject(Triple originalTriple, List<Triple> patterns, Model model, Statement stmt) {
-		for(Triple t:patterns) {
-			if(!t.matches(originalTriple)) {
-				if(t.subjectMatches(originalTriple.getSubject())) {
-					Node subject = stmt.getSubject().asNode();
-					Node predicate = t.getPredicate();
-					Node object = t.getObject();
-					if(getStatements(subject,predicate,object,model).isEmpty()) {
-						//eliminate
-						eliminate(t,stmt, model, patterns);
-//						System.out.println("no statement:"+subject+","+predicate+","+object);
-//						blacklist.add(stmt.getSubject());
-//						eliminated.add(t.getSubject());
-						break;
-					}
-//					System.out.println("matches statement:"+t);
-				} else if(t.objectMatches(originalTriple.getSubject())) {
-					Node subject = t.getSubject();
-					Node predicate = t.getPredicate();
-					Node object = stmt.getSubject().asNode();
-					if(getStatements(subject,predicate,object,model).isEmpty()) {
-						//eliminate
-						eliminate(t,stmt, model, patterns);
-//						System.out.println("no statement:"+subject+","+predicate+","+object);
-//						blacklist.add(stmt.getSubject());
-//						eliminated.add(t.getSubject());
-						break;
-					}
-				}
-			}
-		}
-	}
-
-	private void eliminate(Triple t, Statement stmt, Model model, List<Triple> patterns) {
-		//check if its a branch and where the branch is
-		Node subject = t.getSubject();
-		Node predicate = t.getPredicate();
-		Node object = t.getObject();
-		List<SNode> validSubjects = new ArrayList<SNode>();
-		for(Statement correctStmt:getStatements(subject,predicate,object,model)) {
-//			System.out.println(correctStmt);
-			validSubjects.add(new SNode(correctStmt.getSubject(),t.getSubject()));
-		}
-//		Boolean hasBranch = validSubjects.size() > 0;
-//		if(hasBranch) { //calculate the common node where it branches
-//			calculateBranchNode(stmt.getSubject(),validSubjects,model);
-//		}
-			
-		//backward elimination recursion and mark forward elimination/blacklisting
-		eliminateR(stmt.getSubject(),validSubjects,model, 0, stmt.getSubject(), patterns, t.getSubject(), new ArrayList<SNode>());
-		
-		//forward elimination
-		//add subject to list and also all connected objects if not branch
-	}
-	
-	private int eliminateR(Resource subject, List<SNode> validSubjects,
-			Model model, int count, Resource parent, List<Triple> patterns, Node var, List<SNode> path) {
-//		System.out.println("\t"+parent+"->"+subject);
-		traversed.add(subject);
-		
-		if(validSubjects.contains(new SNode(subject,var))) {
-			return count;
-		}
-		
-		for(Triple t:patterns) {
-			StmtIterator stmts = null;
-			Node nextVar = null;
-			if(t.subjectMatches(var)) {
-				stmts = model.listStatements(subject,null,(RDFNode)null);
-				nextVar = t.getObject();
-			}
-			else if(t.objectMatches(var)) {
-				stmts = model.listStatements(null,null,subject);
-				nextVar = t.getMatchSubject();
-			}
-			
-			if(stmts!=null) {
-				while(stmts.hasNext()) {
-//					if(count==1) { //create new path for each branch out
-						List<SNode> childPath = new ArrayList<SNode>();
-//					}
-					
-					Statement stmt = stmts.next();
-					Resource nextNode = null;
-					if(t.subjectMatches(var)) {
-						if(!stmt.getObject().isLiteral()) {
-							nextNode = stmt.getObject().asResource();
-						} else {
-							continue;
-						}
-					} else if(t.objectMatches(var)) {
-						nextNode = stmt.getSubject();
-					}
-		//			System.out.println(o.isLiteral() + ":" + o + ":" + subject + ":" + stmt.getPredicate());
-					if(!traversed.contains(nextNode)) {
-						int nextCount = count + 1;
-		//				System.out.println(o);
-						int tempResult = eliminateR(nextNode.asResource(),validSubjects,model,nextCount,subject,patterns,nextVar,childPath);
-						
-//						//on the wind down add the branch
-						path.add(new SNode(nextNode,t.getSubject()));
-//						if(path!=null) {
-//							path.add(nextNode);
-//						} else {
-////							System.out.println("path null");
-//							path = new ArrayList<Resource>();
-//							path.add(nextNode);
-//							path.add(subject);
-//							eliminateNodes(path);
-//							path.clear();
-//							path = null;
-//						}
-						if(tempResult>0) {
-							if(count==tempResult/2) {
-//								for(Resource r:path) {
-//									if(blacklist.contains(r)) {
-//										blacklist.remove(r);
-//									}
-//								}
-								//clear the path down the line
-								path.clear();
-								
-//								childPath.clear();
-//								System.out.println("\n\n"+nextNode);
-							} else {
-								return tempResult;
-							}
-						}
-//						if(count==1) {
-						path.addAll(childPath);
-//							path.add(parent);
-							eliminateNodes(path);
-//						}
-					}
-				}
-			}
-		}
-		
-		return 0;
-	}
-	
-	private void eliminateNodes(List<SNode> path) {		
-		//eliminate nodes in list	
-		Iterator<SelectedNode> i = selectedNodes.iterator();
-		while (i.hasNext()) {
-		   SelectedNode node = i.next(); // must be called before you can call i.remove()
-		   if(path.contains(node.getSubject())) {
-			   i.remove();
-			}
-		}
-		
-		//blaclist/forward elimination
-		blacklist.addAll(path);
-		for(SNode n:blacklist) {
-			System.out.println("eliminate:"+n);
-		}
-//		System.out.println("-------------");
-	}
-
-//	private Resource calculateBranchNode(Resource invalidNode, List<Resource> validSubjects, Model model) {
-//		
-//		//trivial case: they are connected to each other directly
-//		StmtIterator stmts = model.listStatements(invalidNode,null,(RDFNode)null);
-//		while(stmts.hasNext()) {
-//			Statement stmt = stmts.next();
-//			if(validSubjects.contains(stmt.getObject().asResource())) {
-//				validSubjects.remove(stmt.getObject().asResource());
-//			}
-//		}
-//		stmts = model.listStatements(null,null,invalidNode);
-//		while(stmts.hasNext()) {
-//			Statement stmt = stmts.next();
-//			if(validSubjects.contains(stmt.getSubject())) {
-//				validSubjects.remove(stmt.getSubject());
-//			}
-//		}
-//		if(validSubjects.isEmpty()) {
-//			return invalidNode;
-//		}
-//		
-//		//expand by one neighbour each time to find common node
-//		stmts = model.listStatements(invalidNode,null,(RDFNode)null);
-//		while(stmts.hasNext()) {
-//			Statement stmt = stmts.next();
-//			if(validSubjects.contains(stmt.getObject().asResource())) {
-//				validSubjects.remove(stmt.getObject().asResource());
-//			}
-//		}
-//		stmts = model.listStatements(null,null,invalidNode);
-//		while(stmts.hasNext()) {
-//			Statement stmt = stmts.next();
-//			if(validSubjects.contains(stmt.getSubject())) {
-//				validSubjects.remove(stmt.getSubject());
-//			}
-//		}
-//		
-//		return invalidNode;
-//		
-//	}
 
 	public void visit(OpQuadPattern arg0) {
 		// TODO Auto-generated method stub
