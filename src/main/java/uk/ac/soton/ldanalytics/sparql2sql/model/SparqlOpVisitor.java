@@ -82,6 +82,7 @@ public class SparqlOpVisitor implements OpVisitor {
 //	Map<Node,Node> finalSelNodes = new HashMap<Node,Node>();
 //	Set<NodeObj> selNodes = new HashSet<NodeObj>();
 //	Set<NodeObj> finalSelNodes = new HashSet<NodeObj>();
+	List<List<SelectedNode>> allSelectedNodes = new ArrayList<List<SelectedNode>>();
 	
 //	String previousSelect = "";
 	String selectClause = "SELECT ";
@@ -186,7 +187,11 @@ public class SparqlOpVisitor implements OpVisitor {
 					varMapping.put(n.getSubjectVar(), "'" + n.getSubjectUri() + "'");
 				}
 			}
-			
+
+			List<SelectedNode> nodesCopy = new ArrayList<SelectedNode>();
+			nodesCopy.addAll(selectedNodes);
+			selectedNodes.clear();
+			allSelectedNodes.add(nodesCopy);
 		}
 	}
 	
@@ -564,8 +569,28 @@ public class SparqlOpVisitor implements OpVisitor {
 	}
 
 	public void visit(OpLeftJoin arg0) {
-		// TODO Auto-generated method stub
-		
+		if(allSelectedNodes.size()>1) {
+			for(SelectedNode right:allSelectedNodes.get(1)) {
+				for(SelectedNode left:allSelectedNodes.get(0)) {
+					if(left.getSubject().equals(right.getSubject())) {
+						if(right.isLeafValue()) {
+							String modifier = "";
+							if(!whereClause.trim().equals("WHERE")) {
+								modifier = " AND ";
+							}
+							whereClause += modifier + right.getWherePart();
+						} else if(right.isLeafMap()) {
+			//				System.out.println(n.getVar() + ":" + n.getTable() + "." + n.getColumn());
+							varMapping.put(right.getVar(), right.getTable() + "." + right.getColumn());
+							tableList.add(right.getTable());
+						} else if(right.isObjectVar) {
+							varMapping.put(right.getVar(), "'" + right.getObjectUri() + "'");
+						}
+						break;
+					}
+				}
+			}
+		}
 	}
 
 	public void visit(OpUnion arg0) {
@@ -695,6 +720,7 @@ public class SparqlOpVisitor implements OpVisitor {
 				if(!rdmsName.equals(var.getName())) {
 					selectClause += " AS " + var.getName();
 				}
+				//TODO:take care of NULL
 				varMapping.put(var.getName(), var.getName());
 //				projections += var.getName();
 			} else {
