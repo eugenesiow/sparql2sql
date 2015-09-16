@@ -113,7 +113,7 @@ public class SparqlOpVisitor implements OpVisitor {
 //				graphTraverse(t,model);
 //			}
 			for(Triple pattern:patterns) {
-				System.out.println("parentt:"+pattern);
+//				System.out.println("parentt:"+pattern);
 				traversedNodes.clear();
 				if(!traversedTriples.contains(pattern))
 					graphTraverse(patterns,pattern,model);
@@ -206,7 +206,7 @@ public class SparqlOpVisitor implements OpVisitor {
 		Set<String> results = new HashSet<String>();
 //		List<SelectedNode> tempSel = new ArrayList<SelectedNode>();
 		for(Statement stmt:getStatements(subject,predicate,object,model)) {
-			System.out.println("stmt:"+stmt+",t:"+t);
+//			System.out.println("stmt:"+stmt+",t:"+t);
 
 			if(t.getSubject().isVariable() && t.getObject().isURI()) {
 				if(FormatUtil.compareUriPattern(t.getObject().getURI(), stmt.getObject().asResource().getURI())) {
@@ -228,7 +228,7 @@ public class SparqlOpVisitor implements OpVisitor {
 		}
 		Boolean add = true;
 		for(String resultStr:results) {
-			System.out.println("samplemain:"+resultStr);
+//			System.out.println("samplemain:"+resultStr);
 			String[] parts = resultStr.split(";");
 			if(parts.length>1) {
 				if(parts[1].equals("false")) {
@@ -241,7 +241,7 @@ public class SparqlOpVisitor implements OpVisitor {
 		}
 		
 		if(add) {
-			System.out.println("add:"+tempSelectedNodes.size());
+//			System.out.println("add:"+tempSelectedNodes.size());
 //			for(SelectedNode sel:tempSelectedNodes) {
 //				System.out.println("add:"+sel);
 //			}
@@ -298,7 +298,7 @@ public class SparqlOpVisitor implements OpVisitor {
 								node.setBinding(currentT);
 								tempSelectedNodes.add(node);
 								if(sStmt.getObject().isResource() || sStmt.getObject().isAnon()) {
-									System.out.println(fmt+"s:"+sStmt+" t:"+currentT);
+//									System.out.println(fmt+"s:"+sStmt+" t:"+currentT);
 									Boolean subResult = graphTraverseR(patterns,currentT,model,sStmt,fmt+"\t");
 									results.add(currentT.getPredicate()+"|"+currentT.getObject()+";"+subResult);
 //									if(subResult==false)
@@ -366,7 +366,7 @@ public class SparqlOpVisitor implements OpVisitor {
 								node.setBinding(currentT);;
 								tempSelectedNodes.add(node);
 								if(sStmt.getObject().isResource() || sStmt.getObject().isAnon()) {
-									System.out.println(fmt+"p:"+sStmt+" t:"+currentT);
+//									System.out.println(fmt+"p:"+sStmt+" t:"+currentT);
 									Boolean subResult = graphTraverseR(patterns,currentT,model,sStmt,fmt+"\t");
 									results.add(currentT.getPredicate()+"|"+currentT.getObject()+";"+subResult);
 //									if(subResult==false)
@@ -413,7 +413,7 @@ public class SparqlOpVisitor implements OpVisitor {
 									currentT = Triple.create(currentT.getObject(), currentT.getPredicate(), currentT.getSubject());
 									sStmt = model.createStatement(sStmt.getObject().asResource(), sStmt.getPredicate(), model.asRDFNode(sStmt.getSubject().asNode()));
 									traversedNodes.add(nodeStr);
-									System.out.println(fmt+"o:"+sStmt+" t:"+currentT);
+//									System.out.println(fmt+"o:"+sStmt+" t:"+currentT);
 									Boolean subResult = graphTraverseR(patterns,currentT,model,sStmt,fmt+"\t");
 									results.add(currentT.getPredicate()+"|"+currentT.getObject()+";"+subResult);
 //									if(subResult==false)
@@ -427,7 +427,7 @@ public class SparqlOpVisitor implements OpVisitor {
 			}
 		}
 		for(String resultStr:results) {
-			System.out.println(fmt+"sample:"+resultStr);
+//			System.out.println(fmt+"sample:"+resultStr);
 			String[] parts = resultStr.split(";");
 			if(parts.length>1) {
 				if(parts[1].equals("false")) {
