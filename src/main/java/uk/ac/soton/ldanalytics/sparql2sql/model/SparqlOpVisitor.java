@@ -113,7 +113,7 @@ public class SparqlOpVisitor implements OpVisitor {
 //				graphTraverse(t,model);
 //			}
 			for(Triple pattern:patterns) {
-//				System.out.println("parentt:"+pattern);
+				System.out.println("parentt:"+pattern);
 				traversedNodes.clear();
 				if(!traversedTriples.contains(pattern))
 					graphTraverse(patterns,pattern,model);
@@ -148,8 +148,10 @@ public class SparqlOpVisitor implements OpVisitor {
 			while(!search.isEmpty()) {
 				Triple t = search.poll();
 				for(Triple pattern:patterns) {
-					if(pattern.getSubject().equals(t.getObject()) || pattern.getObject().equals(t.getSubject())) {
+					if(pattern.getSubject().equals(t.getObject()) || pattern.getObject().equals(t.getSubject()) || pattern.getSubject().equals(t.getSubject())) {
+//						System.out.println("remove:"+pattern);
 						if(!removeList.contains(pattern)) {
+							System.out.println(pattern);
 							search.add(pattern);
 							removeList.add(pattern);
 						}
@@ -204,7 +206,7 @@ public class SparqlOpVisitor implements OpVisitor {
 		Set<String> results = new HashSet<String>();
 //		List<SelectedNode> tempSel = new ArrayList<SelectedNode>();
 		for(Statement stmt:getStatements(subject,predicate,object,model)) {
-//			System.out.println("stmt:"+stmt+",t:"+t);
+			System.out.println("stmt:"+stmt+",t:"+t);
 
 			if(t.getSubject().isVariable() && t.getObject().isURI()) {
 				if(FormatUtil.compareUriPattern(t.getObject().getURI(), stmt.getObject().asResource().getURI())) {
@@ -306,6 +308,17 @@ public class SparqlOpVisitor implements OpVisitor {
 //									System.out.println(fmt+"literal:"+sStmt.getObject()+" t:"+currentT.getObject());
 								}
 							}
+						} 
+						else if(currentO.isLiteral()) {
+							if(sStmt.getObject().isLiteral()) {
+								String lit1 = sStmt.getObject().asLiteral().toString();
+								String lit2 = currentO.getLiteralValue().toString();
+								if(!lit1.equals(lit2)) {
+//									System.out.println(fmt+"hitfalse_literal:"+sStmt.getObject().asLiteral()+","+currentO.getLiteralValue()+","+sStmt.getObject().asLiteral().equals(currentO.getLiteralValue()));
+//									traversedTriples.add(currentT);
+									return false;
+								}
+							}
 						}
 					}
 //					traversedTriples.add(currentT);
@@ -355,6 +368,17 @@ public class SparqlOpVisitor implements OpVisitor {
 								else if(sStmt.getObject().isLiteral()) {
 //									selNode.add(sStmt.getObject().asNode());
 //									System.out.println(fmt+"literala:"+sStmt.getObject()+" t:"+currentT);
+								}
+							}
+						}
+						else if(currentO.isLiteral()) {
+							if(sStmt.getObject().isLiteral()) {
+								String lit1 = sStmt.getObject().asLiteral().toString();
+								String lit2 = currentO.getLiteralValue().toString();
+								if(!lit1.equals(lit2)) {
+//									System.out.println(fmt+"hitfalse_literal:"+sStmt.getObject().asLiteral()+","+currentO.getLiteralValue()+","+sStmt.getObject().asLiteral().equals(currentO.getLiteralValue()));
+//									traversedTriples.add(currentT);
+									return false;
 								}
 							}
 						}
