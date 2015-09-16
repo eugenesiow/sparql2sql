@@ -610,7 +610,7 @@ public class SparqlOpVisitor implements OpVisitor {
 				String unionStr = "SELECT * FROM ";
 				for(String tables:tableList)
 					unionStr += tables + " ";
-				unionStr += " WHERE "+filterList.get(whereIndex);
+				unionStr += " WHERE "+filterList.get(whereIndex-1);
 				unionList.add(unionStr);
 			}
 		}
@@ -769,9 +769,6 @@ public class SparqlOpVisitor implements OpVisitor {
 		//has union
 		if(!unionList.isEmpty()) {
 			String unionStr = "";
-			if(!fromClause.trim().equals("FROM")) {
-				fromClause += " , ";
-			}
 			for(String union:unionList) {
 				String modifier = "";
 				if(!unionStr.equals(""))
@@ -779,7 +776,7 @@ public class SparqlOpVisitor implements OpVisitor {
 				unionStr += modifier + union;
 			}
 //			System.out.println(unionStr);
- 			fromClause += " (" + unionStr + ") ";
+ 			fromClause = "FROM (" + unionStr + ") ";
 		}
 		
 //		System.out.println(selectClause);
