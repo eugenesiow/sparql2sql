@@ -220,26 +220,26 @@ public class test {
 //				"  }\n" + 
 //				"}";
 		
-		String queryStr = "PREFIX om-owl: <http://knoesis.wright.edu/ssw/ont/sensor-observation.owl#>\n" + 
-				"PREFIX weather: <http://knoesis.wright.edu/ssw/ont/weather.owl#>\n" + 
-				"PREFIX wgs84_pos: <http://www.w3.org/2003/01/geo/wgs84_pos#>\n" + 
-				"PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>\n" + 
-				"PREFIX owl-time: <http://www.w3.org/2006/time#>\n" + 
-				"\n" + 
-				"SELECT ( MIN(?temperature) AS ?minTemperature ) ( MAX(?temperature) AS ?maxTemperature )\n" + 
-				"WHERE {\n" + 
-				"  	?sensor om-owl:processLocation ?sensorLocation ;\n" + 
-				"          om-owl:generatedObservation ?observation .\n" + 
-				"  	?sensorLocation wgs84_pos:alt \"5350.0\" ;\n" + 
-				"                  wgs84_pos:lat \"40.82944\" ;\n" + 
-				"                  wgs84_pos:long \"-111.88222\" .\n" + 
-				"  	?observation om-owl:observedProperty weather:_AirTemperature ;\n" + 
-				"               om-owl:result [ om-owl:floatValue ?temperature ] ;\n" + 
-				"               om-owl:samplingTime ?instant .\n" + 
-				"		?instant owl-time:inXSDDateTime ?time .\n" + 
-				"	FILTER (?time>\"2003-04-01T00:00:00\"^^xsd:dateTime && ?time<\"2003-04-02T00:00:00\")\n" + 
-				"}\n" + 
-				"GROUP BY ?sensor";
+//		String queryStr = "PREFIX om-owl: <http://knoesis.wright.edu/ssw/ont/sensor-observation.owl#>\n" + 
+//				"PREFIX weather: <http://knoesis.wright.edu/ssw/ont/weather.owl#>\n" + 
+//				"PREFIX wgs84_pos: <http://www.w3.org/2003/01/geo/wgs84_pos#>\n" + 
+//				"PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>\n" + 
+//				"PREFIX owl-time: <http://www.w3.org/2006/time#>\n" + 
+//				"\n" + 
+//				"SELECT ( MIN(?temperature) AS ?minTemperature ) ( MAX(?temperature) AS ?maxTemperature )\n" + 
+//				"WHERE {\n" + 
+//				"  	?sensor om-owl:processLocation ?sensorLocation ;\n" + 
+//				"          om-owl:generatedObservation ?observation .\n" + 
+//				"  	?sensorLocation wgs84_pos:alt \"5350.0\" ;\n" + 
+//				"                  wgs84_pos:lat \"40.82944\" ;\n" + 
+//				"                  wgs84_pos:long \"-111.88222\" .\n" + 
+//				"  	?observation om-owl:observedProperty weather:_AirTemperature ;\n" + 
+//				"               om-owl:result [ om-owl:floatValue ?temperature ] ;\n" + 
+//				"               om-owl:samplingTime ?instant .\n" + 
+//				"		?instant owl-time:inXSDDateTime ?time .\n" + 
+//				"	FILTER (?time>\"2003-04-01T00:00:00\"^^xsd:dateTime && ?time<\"2003-04-02T00:00:00\")\n" + 
+//				"}\n" + 
+//				"GROUP BY ?sensor";
 		
 //		String queryStr = "PREFIX om-owl: <http://knoesis.wright.edu/ssw/ont/sensor-observation.owl#>\n" + 
 //				"PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>\n" + 
@@ -274,6 +274,61 @@ public class test {
 //				"}\n" + 
 //				"GROUP BY ?sensor\n" + 
 //				"HAVING (count(?time) = 0)";
+		
+//		String queryStr = "PREFIX om-owl: <http://knoesis.wright.edu/ssw/ont/sensor-observation.owl#>\n" + 
+//				"PREFIX weather: <http://knoesis.wright.edu/ssw/ont/weather.owl#>\n" + 
+//				"PREFIX wgs84_pos: <http://www.w3.org/2003/01/geo/wgs84_pos#>\n" + 
+//				"PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>\n" + 
+//				"PREFIX owl-time: <http://www.w3.org/2006/time#>\n" + 
+//				"\n" + 
+//				"SELECT ( IF(AVG(?windSpeed) < 1,  0,\n" + 
+//				"          IF(AVG(?windSpeed) < 4,  1,\n" + 
+//				"           IF(AVG(?windSpeed) < 8,  2,\n" + 
+//				"            IF(AVG(?windSpeed) < 13, 3,\n" + 
+//				"             IF(AVG(?windSpeed) < 18, 4,\n" + 
+//				"              IF(AVG(?windSpeed) < 25, 5,\n" + 
+//				"               IF(AVG(?windSpeed) < 31, 6,\n" + 
+//				"                IF(AVG(?windSpeed) < 39, 7,\n" + 
+//				"                 IF(AVG(?windSpeed) < 47, 8,\n" + 
+//				"                  IF(AVG(?windSpeed) < 55, 9,\n" + 
+//				"                   IF(AVG(?windSpeed) < 64, 10,\n" + 
+//				"                    IF(AVG(?windSpeed) < 73, 11, 12) )))))))))))\n" + 
+//				"         AS ?windForce )\n" + 
+//				"       ( AVG(?windDirection) AS ?avgWindDirection )\n" + 
+//				"WHERE {\n" + 
+//				"  ?sensor om-owl:processLocation ?sensorLocation ;\n" + 
+//				"          om-owl:generatedObservation ?o1 ;\n" + 
+//				"          om-owl:generatedObservation ?o2 .\n" + 
+//				"  ?sensorLocation wgs84_pos:alt \"5350.0\" ;\n" + 
+//				"                  wgs84_pos:lat \"40.82944\" ;\n" + 
+//				"                  wgs84_pos:long \"-111.88222\" .\n" + 
+//				"  ?o1 om-owl:observedProperty weather:_WindSpeed ;\n" + 
+//				"      om-owl:result [ om-owl:floatValue ?windSpeed ] ;\n" + 
+//				"      om-owl:samplingTime ?instant .\n" + 
+//				"  ?o2 om-owl:observedProperty weather:_WindDirection ;\n" + 
+//				"      om-owl:result [ om-owl:floatValue ?windDirection ] ;\n" + 
+//				"      om-owl:samplingTime ?instant .\n" + 
+//				"  ?instant owl-time:inXSDDateTime ?time .\n" + 
+//				"  FILTER (?time>\"2003-04-01T00:00:00\"^^xsd:dateTime && ?time<\"2003-04-02T00:00:00\")\n" + 
+//				"}\n" + 
+//				"GROUP BY ?sensor";
+		
+		String queryStr = "PREFIX om-owl: <http://knoesis.wright.edu/ssw/ont/sensor-observation.owl#>\n" + 
+				"PREFIX weather: <http://knoesis.wright.edu/ssw/ont/weather.owl#>\n" + 
+				"PREFIX wgs84_pos: <http://www.w3.org/2003/01/geo/wgs84_pos#>\n" + 
+				"PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>\n" + 
+				"PREFIX owl-time: <http://www.w3.org/2006/time#>\n" + 
+				"\n" + 
+				"SELECT DISTINCT ?lat ?long ?alt\n" + 
+				"WHERE {\n" + 
+				"  ?sensor om-owl:generatedObservation [a weather:RainfallObservation; om-owl:samplingTime ?instant ] .\n" + 
+				"  ?sensor om-owl:processLocation ?sensorLocation .\n" + 
+				"  ?sensorLocation wgs84_pos:alt ?alt ;\n" + 
+				"                  wgs84_pos:lat ?lat ;\n" + 
+				"                  wgs84_pos:long ?long .\n" + 
+				"  ?instant owl-time:inXSDDateTime ?time .\n" + 
+				"  FILTER (?time>\"2003-04-01T00:00:00\"^^xsd:dateTime && ?time<\"2013-04-02T00:00:00\")\n" + 
+				"}";
 		
 		RdfTableMapping mapping = new RdfTableMapping();
 		mapping.loadMapping("mapping/4UT01.nt");

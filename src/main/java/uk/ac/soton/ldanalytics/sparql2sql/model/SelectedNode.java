@@ -76,8 +76,10 @@ public class SelectedNode {
 	public String getWherePart() {
 		String wherePart = "";
 		Node object = pattern.getObject();
-		if(stmt!=null)
-			wherePart = tableName + "." + columnName + "=" + FormatUtil.processLiteral(object) + " ";
+		if(stmt!=null) {
+			if(!(tableName + "." + columnName).equals(FormatUtil.processLiteral(object)))
+				wherePart = tableName + "." + columnName + "=" + FormatUtil.processLiteral(object) + " ";
+		}
 		return wherePart;
 	}
 	
