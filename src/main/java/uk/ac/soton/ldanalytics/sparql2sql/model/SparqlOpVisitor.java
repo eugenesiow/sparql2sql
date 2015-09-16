@@ -572,8 +572,8 @@ public class SparqlOpVisitor implements OpVisitor {
 	}
 
 	public void visit(OpJoin arg0) {
-		// TODO Auto-generated method stub
-		
+		// TODO fix join
+		filterList.clear();
 	}
 
 	public void visit(OpLeftJoin arg0) {
@@ -670,12 +670,15 @@ public class SparqlOpVisitor implements OpVisitor {
 		
 		//build filters
 		for(String filterStr:filterList) {
-			String modifier = "";
-			if(!whereClause.equals("WHERE ")) {
-				modifier = " AND ";
+			if(!filterStr.trim().equals("")) {
+				String modifier = "";
+				if(!whereClause.equals("WHERE ")) {
+					modifier = " AND ";
+				}
+				whereClause += modifier + filterStr;
 			}
-			whereClause += modifier + filterStr;
 		}
+		
 		
 		if(tableList.size()>1) {
 //			System.out.println("joins required");
