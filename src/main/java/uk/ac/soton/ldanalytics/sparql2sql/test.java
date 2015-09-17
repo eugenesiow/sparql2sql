@@ -230,14 +230,14 @@ public class test {
 //				"WHERE {\n" + 
 //				"  	?sensor om-owl:processLocation ?sensorLocation ;\n" + 
 //				"          om-owl:generatedObservation ?observation .\n" + 
-//				"  	?sensorLocation wgs84_pos:alt \"5350.0\" ;\n" + 
-//				"                  wgs84_pos:lat \"40.82944\" ;\n" + 
-//				"                  wgs84_pos:long \"-111.88222\" .\n" + 
+//				"  	?sensorLocation wgs84_pos:alt \"5350\"^^xsd:float ;\n" + 
+//				"                  wgs84_pos:lat \"40.82944\"^^xsd:float ;\n" + 
+//				"                  wgs84_pos:long \"-111.88222\"^^xsd:float .\n" + 
 //				"  	?observation om-owl:observedProperty weather:_AirTemperature ;\n" + 
 //				"               om-owl:result [ om-owl:floatValue ?temperature ] ;\n" + 
 //				"               om-owl:samplingTime ?instant .\n" + 
 //				"		?instant owl-time:inXSDDateTime ?time .\n" + 
-//				"	FILTER (?time>\"2003-04-01T00:00:00\"^^xsd:dateTime && ?time<\"2003-04-02T00:00:00\")\n" + 
+//				"	FILTER (?time>\"2003-04-01T00:00:00\"^^xsd:dateTime && ?time<\"2003-04-02T00:00:00\"^^xsd:dateTime)\n" + 
 //				"}\n" + 
 //				"GROUP BY ?sensor";
 		
@@ -261,19 +261,19 @@ public class test {
 //				"  FILTER (?time>=\"2003-04-03T16:00:00\"^^xsd:dateTime && ?time<\"2003-04-03T17:00:00\"^^xsd:dateTime)\n" + 
 //				"}";
 		
-		String queryStr = "PREFIX om-owl: <http://knoesis.wright.edu/ssw/ont/sensor-observation.owl#>\n" + 
-				"PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>\n" + 
-				"PREFIX owl-time: <http://www.w3.org/2006/time#>\n" + 
-				"\n" + 
-				"SELECT ?sensor\n" + 
-				"WHERE {\n" + 
-				"	?sensor om-owl:generatedObservation ?observation.\n" + 
-				"	?observation om-owl:samplingTime ?instant .\n" + 
-				"	?instant owl-time:inXSDDateTime ?time .\n" + 
-				"	FILTER (?time>\"2003-04-01T00:00:00\"^^xsd:dateTime && ?time<\"2003-04-01T01:00:00\")\n" + 
-				"}\n" + 
-				"GROUP BY ?sensor\n" + 
-				"HAVING (count(?time) = 0)";
+//		String queryStr = "PREFIX om-owl: <http://knoesis.wright.edu/ssw/ont/sensor-observation.owl#>\n" + 
+//				"PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>\n" + 
+//				"PREFIX owl-time: <http://www.w3.org/2006/time#>\n" + 
+//				"\n" + 
+//				"SELECT ?sensor\n" + 
+//				"WHERE {\n" + 
+//				"	?sensor om-owl:generatedObservation ?observation.\n" + 
+//				"	?observation om-owl:samplingTime ?instant .\n" + 
+//				"	?instant owl-time:inXSDDateTime ?time .\n" + 
+//				"	FILTER (?time>\"2003-04-01T00:00:00\"^^xsd:dateTime && ?time<\"2003-04-01T01:00:00\")\n" + 
+//				"}\n" + 
+//				"GROUP BY ?sensor\n" + 
+//				"HAVING (count(?time) = 0)";
 		
 //		String queryStr = "PREFIX om-owl: <http://knoesis.wright.edu/ssw/ont/sensor-observation.owl#>\n" + 
 //				"PREFIX weather: <http://knoesis.wright.edu/ssw/ont/weather.owl#>\n" + 

@@ -113,7 +113,7 @@ public class SparqlOpVisitor implements OpVisitor {
 //				graphTraverse(t,model);
 //			}
 			for(Triple pattern:patterns) {
-//				System.out.println("parentt:"+pattern);
+				System.out.println("parentt:"+pattern);
 				traversedNodes.clear();
 				if(!traversedTriples.contains(pattern))
 					graphTraverse(patterns,pattern,model);
@@ -178,8 +178,12 @@ public class SparqlOpVisitor implements OpVisitor {
 					whereClause += modifier + n.getWherePart();
 				} else if(n.isLeafMap()) {
 	//				System.out.println(n.getVar() + ":" + n.getTable() + "." + n.getColumn());
-					varMapping.put(n.getVar(), n.getTable() + "." + n.getColumn());
-					tableList.add(n.getTable());
+					if(n.isFixedValue()) {
+						varMapping.put(n.getVar(), n.getColumn());
+					} else {
+						varMapping.put(n.getVar(), n.getTable() + "." + n.getColumn());
+						tableList.add(n.getTable());
+					}
 				} else if(n.isObjectVar) {
 					varMapping.put(n.getVar(), "'" + n.getObjectUri() + "'");
 				}
@@ -241,10 +245,10 @@ public class SparqlOpVisitor implements OpVisitor {
 		}
 		
 		if(add) {
-//			System.out.println("add:"+tempSelectedNodes.size());
-//			for(SelectedNode sel:tempSelectedNodes) {
-//				System.out.println("add:"+sel);
-//			}
+			System.out.println("add:"+tempSelectedNodes.size());
+			for(SelectedNode sel:tempSelectedNodes) {
+				System.out.println("add:"+sel);
+			}
 //			finalSelNodes.addAll(selNodes);
 //			finalSelNodes.putAll(selNodes);
 			selectedNodes.addAll(tempSelectedNodes);
@@ -298,7 +302,7 @@ public class SparqlOpVisitor implements OpVisitor {
 								node.setBinding(currentT);
 								tempSelectedNodes.add(node);
 								if(sStmt.getObject().isResource() || sStmt.getObject().isAnon()) {
-//									System.out.println(fmt+"s:"+sStmt+" t:"+currentT);
+									System.out.println(fmt+"s:"+sStmt+" t:"+currentT);
 									Boolean subResult = graphTraverseR(patterns,currentT,model,sStmt,fmt+"\t");
 									results.add(currentT.getPredicate()+"|"+currentT.getObject()+";"+subResult);
 //									if(subResult==false)
@@ -410,10 +414,14 @@ public class SparqlOpVisitor implements OpVisitor {
 							if(sStmt.getSubject().isResource() || sStmt.getSubject().isAnon()) {
 								String nodeStr = sStmt.getSubject().toString()+":"+currentP.toString()+":"+sStmt.getObject().toString();
 								if(!traversedNodes.contains(nodeStr)) {
+									SelectedNode node = new SelectedNode();
+									node.setStatement(sStmt);
+									node.setBinding(currentT);
+									tempSelectedNodes.add(node);
 									currentT = Triple.create(currentT.getObject(), currentT.getPredicate(), currentT.getSubject());
-									sStmt = model.createStatement(sStmt.getObject().asResource(), sStmt.getPredicate(), model.asRDFNode(sStmt.getSubject().asNode()));
+									sStmt = model.createStatement(sStmt.getObject().asResource(), sStmt.getPredicate(), model.asRDFNode(sStmt.getSubject().asNode()));									
 									traversedNodes.add(nodeStr);
-//									System.out.println(fmt+"o:"+sStmt+" t:"+currentT);
+									System.out.println(fmt+"o:"+sStmt+" t:"+currentT);
 									Boolean subResult = graphTraverseR(patterns,currentT,model,sStmt,fmt+"\t");
 									results.add(currentT.getPredicate()+"|"+currentT.getObject()+";"+subResult);
 //									if(subResult==false)
@@ -715,12 +723,11 @@ public class SparqlOpVisitor implements OpVisitor {
 			}
 		}
 		
-		
 		if(tableList.size()>1) {
 //			System.out.println("joins required");
 			Map<String, Set<String>> joinMap = new HashMap<String,Set<String>>(); 
 			for(SelectedNode node:selectedNodes) {
-				if(node.isLeafMap) {
+				if(node.isLeafMap()) {
 					String var = node.getVar();
 					Set<String> cols = joinMap.get(var);
 					if(cols==null) {
@@ -729,7 +736,7 @@ public class SparqlOpVisitor implements OpVisitor {
 					cols.add(node.getTable()+"."+node.getColumn());
 					joinMap.put(var, cols);
 				}
-				if(node.isSubjectLeafMap) {
+				if(node.isSubjectLeafMap()) {
 					String var = node.getSubjectVar();
 					Set<String> cols = joinMap.get(var);
 					if(cols==null) {

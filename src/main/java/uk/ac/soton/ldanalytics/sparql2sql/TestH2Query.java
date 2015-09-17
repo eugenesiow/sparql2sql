@@ -22,7 +22,7 @@ import com.hp.hpl.jena.sparql.algebra.OpWalker;
 
 public class TestH2Query {
 	public static void main(String[] args) {
-		String folderPath = "/Users/eugene/Downloads/knoesis_observations_map/";
+		String folderPath = "/Users/eugene/Downloads/knoesis_observations_map_meta/";
 		String queryPath = "/Users/eugene/Dropbox/Private/WORK/LinkedSensorData/queries/";
 		String outputPath = "/Users/eugene/Downloads/knoesis_results/";
 		File folder = new File(folderPath);
@@ -30,7 +30,7 @@ public class TestH2Query {
 		try {
 			Class.forName("org.h2.Driver");
 			
-			String queryName = "q7";
+			String queryName = "q8";
 			for(int run=1;run<=3;run++) {
 				String queryStr = FileUtils.readFileToString(new File(queryPath + queryName + ".sparql"));
 			

@@ -14,11 +14,12 @@ import com.hp.hpl.jena.rdf.model.Statement;
 public class SelectedNode {
 	Statement stmt = null;
 	Triple pattern = null;
-	Boolean isLeafMap = false;
-	Boolean isSubjectLeafMap = false;
-	Boolean isLeafValue = false;
+	private Boolean isLeafMap = false;
+	private Boolean isSubjectLeafMap = false;
+	private Boolean isLeafValue = false;
 	Boolean isSubjectVar = false;
 	Boolean isObjectVar = false;
+	private Boolean isFixedValue = false;
 	String tableName = "";
 	String columnName = "";
 	String subjectTableName = "";
@@ -39,6 +40,10 @@ public class SelectedNode {
 	
 	public Boolean isLeafMap() {
 		return isLeafMap;
+	}
+	
+	public Boolean isFixedValue() {
+		return isFixedValue;
 	}
 	
 	public String getSubjectUri() {
@@ -92,6 +97,10 @@ public class SelectedNode {
 				isLeafMap = true;
 				tableName = parts[0];
 				columnName = parts[1];
+				if(Character.isDigit(parts[1].charAt(0))) { //column name shouldnt start with digit, it is possibly a float
+					isFixedValue = true;
+					columnName = "'"+object.toString()+"'";
+				} 
 			}
 		} else if(object.isResource()) {
 			checkIfResourceIsLeafMap(object.asResource().getURI(),true);
