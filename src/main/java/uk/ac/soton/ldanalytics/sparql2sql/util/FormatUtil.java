@@ -39,7 +39,14 @@ public class FormatUtil {
 				} else {
 					innerExpression = mapVar(func.getArg(1).getVarName(),varMapping);
 				}
-				expression = symbolMap(func.getFunctionSymbol().getSymbol()) + "(" + innerExpression + ")";
+				if(func.getArgs().size()==1) {
+					expression = symbolMap(func.getFunctionSymbol().getSymbol()) + "(" + innerExpression + ")";
+				} else if((func.getArgs().size()==2)) {
+					//TODO: process arg2
+					expression = innerExpression + " " + symbolMap(func.getFunctionSymbol().getSymbol()) + " " + func.getArg(2);
+				} else {
+					expression = symbolMap(func.getFunctionSymbol().getSymbol()) + "(" + innerExpression + ")";
+				}
 			}
 		} else if(expr.isVariable()) {
 			expression = mapVar(expr.getVarName(),varMapping);
@@ -50,6 +57,11 @@ public class FormatUtil {
 	public static String symbolMap(String symbol) {
 		String inputSymbol = symbol.toLowerCase();
 		Map<String, String> symbolMap = new HashMap<String,String>();
+		symbolMap.put("lt", "<");
+		symbolMap.put("le", "<=");
+		symbolMap.put("ge", ">=");
+		symbolMap.put("gt", ">");
+		symbolMap.put("eq", "=");
 		symbolMap.put("hours", "HOUR");
 		symbolMap.put("sample", "MAX");
 		if(symbolMap.containsKey(inputSymbol)) {

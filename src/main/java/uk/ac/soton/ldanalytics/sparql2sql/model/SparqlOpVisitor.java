@@ -610,7 +610,14 @@ public class SparqlOpVisitor implements OpVisitor {
 //		System.out.println("extend");
 		VarExprList vars = arg0.getVarExprList();
 		for(Var var:vars.getVars()) {
-			String originalKey = vars.getExpr(var).getVarName();
+			Expr expr = vars.getExpr(var);
+			String originalKey = expr.getVarName();
+			if(expr.isFunction()) {
+				SparqlExtendExprVisitor v = new SparqlExtendExprVisitor();
+				v.setMapping(varMapping);
+				ExprWalker.walk(v,expr);
+				//v.getExpression();
+			}
 			if(aliases.containsKey(originalKey)) {
 				String val = aliases.remove(originalKey);
 				aliases.put(var.getName(), val);

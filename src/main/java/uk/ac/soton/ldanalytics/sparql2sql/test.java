@@ -313,13 +313,16 @@ public class test {
 //				"}\n" + 
 //				"GROUP BY ?sensor";
 		
+		//                (case WHEN _4UT01.WindSpeed<1 THEN 0 
+//		WHEN _4UT01.WindSpeed<3 THEN 2 END) as windForce
+		
 		String queryStr = "PREFIX om-owl: <http://knoesis.wright.edu/ssw/ont/sensor-observation.owl#>\n" + 
 				"PREFIX weather: <http://knoesis.wright.edu/ssw/ont/weather.owl#>\n" + 
 				"PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>\n" + 
 				"PREFIX owl-time: <http://www.w3.org/2006/time#>\n" + 
 				"PREFIX wgs84_pos: <http://www.w3.org/2003/01/geo/wgs84_pos#>\n" + 
 				"\n" + 
-				"SELECT ( IF(AVG(?windSpeed) < 1,  0,\n" + 
+				"SELECT (IF(AVG(?windDirection) < 1, 0, 12) AS ?wd) ( IF(AVG(?windSpeed) < 1,  0,\n" + 
 				"          IF(AVG(?windSpeed) < 4,  1,\n" + 
 				"           IF(AVG(?windSpeed) < 8,  2,\n" + 
 				"            IF(AVG(?windSpeed) < 13, 3,\n" + 

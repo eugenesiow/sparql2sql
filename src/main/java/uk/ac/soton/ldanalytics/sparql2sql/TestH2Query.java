@@ -30,7 +30,7 @@ public class TestH2Query {
 		try {
 			Class.forName("org.h2.Driver");
 			
-			String queryName = "q8";
+			String queryName = "q4";
 			for(int run=1;run<=3;run++) {
 				String queryStr = FileUtils.readFileToString(new File(queryPath + queryName + ".sparql"));
 			
