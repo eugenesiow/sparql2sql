@@ -616,7 +616,8 @@ public class SparqlOpVisitor implements OpVisitor {
 				SparqlExtendExprVisitor v = new SparqlExtendExprVisitor();
 				v.setMapping(varMapping);
 				ExprWalker.walk(v,expr);
-				//v.getExpression();
+				v.finishVisit();
+				aliases.put(var.getName(), v.getExpression());
 			}
 			if(aliases.containsKey(originalKey)) {
 				String val = aliases.remove(originalKey);

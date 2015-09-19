@@ -20,12 +20,12 @@ public class SparqlExtendExprVisitor implements ExprVisitor {
 	
 	String expression = "";
 	private Map<String, String> varMapping;
-	private String aggKey="";
-	private String aggVal="";
+	Boolean isIf = false;
 
 	public void finishVisit() {
-		// TODO Auto-generated method stub
-		
+		if(isIf) {
+			expression = "CASE \n" + expression + "\nEND";
+		}
 	}
 
 	public void startVisit() {
@@ -46,7 +46,16 @@ public class SparqlExtendExprVisitor implements ExprVisitor {
 
 	public void visit(ExprFunction3 arg0) {
 		if(arg0.getFunctionSymbol().getSymbol().equals("if")) {
-			System.out.println(FormatUtil.processExprType(arg0.getArg1(),varMapping));
+			expression = "WHEN " + FormatUtil.processExprType(arg0.getArg1(),varMapping) + " THEN " + arg0.getArg2();
+			String elsePart = FormatUtil.processExprType(arg0.getArg3(),varMapping);
+			if(!elsePart.startsWith("WHEN")) {
+				expression += " ELSE ";
+			} else {
+				expression += "\n";
+			}
+			expression += elsePart;
+			varMapping.put(arg0.toString(), expression);
+			isIf=true;
 		}
 	}
 
@@ -67,12 +76,7 @@ public class SparqlExtendExprVisitor implements ExprVisitor {
 	}
 
 	public void visit(ExprAggregator arg0) {
-		aggKey = arg0.getAggVar().getVarName();
-		aggVal = FormatUtil.symbolMap(arg0.getAggregator().getName()) + "("; 
-		for(Expr expr:arg0.getAggregator().getExprList()) {
-			aggVal += FormatUtil.processExprType(expr, varMapping); 
-		}
-		aggVal += ")";
+
 	}
 
 	public String getExpression() {

@@ -322,7 +322,7 @@ public class test {
 				"PREFIX owl-time: <http://www.w3.org/2006/time#>\n" + 
 				"PREFIX wgs84_pos: <http://www.w3.org/2003/01/geo/wgs84_pos#>\n" + 
 				"\n" + 
-				"SELECT (IF(AVG(?windDirection) < 1, 0, 12) AS ?wd) ( IF(AVG(?windSpeed) < 1,  0,\n" + 
+				"SELECT ( IF(AVG(?windSpeed) < 1,  0,\n" + 
 				"          IF(AVG(?windSpeed) < 4,  1,\n" + 
 				"           IF(AVG(?windSpeed) < 8,  2,\n" + 
 				"            IF(AVG(?windSpeed) < 13, 3,\n" + 

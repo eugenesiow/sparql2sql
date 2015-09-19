@@ -26,6 +26,9 @@ public class FormatUtil {
 		String expression = "";
 		if(expr.isFunction()) {
 			ExprFunction func = expr.getFunction();
+			if(varMapping.containsKey(func.toString())) {
+				return varMapping.get(func.toString());
+			}
 			if(func.getFunctionIRI()!=null) {
 				if(func.getFunctionIRI().equals("http://www.w3.org/2001/XMLSchema#date"))
 					expression = "CAST(" + mapVar(func.getArg(1).getVarName(),varMapping) + " AS DATE)";
@@ -50,6 +53,8 @@ public class FormatUtil {
 			}
 		} else if(expr.isVariable()) {
 			expression = mapVar(expr.getVarName(),varMapping);
+		} else {
+			expression = expr.toString();
 		}
 		return expression;
 	}
