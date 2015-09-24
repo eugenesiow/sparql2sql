@@ -106,8 +106,9 @@ public class SparqlOpVisitor implements OpVisitor {
 
 	public void visit(OpBGP bgp) {
 		bgpStarted = true;
+		List<Triple> patterns = bgp.getPattern().getList();
 		for(Model model:mapping.getMapping()) {
-			List<Triple> patterns = bgp.getPattern().getList();
+			
 //			for(Triple t:patterns) {
 //				System.out.println("triple:"+t);
 //				graphTraverse(t,model);
@@ -122,87 +123,88 @@ public class SparqlOpVisitor implements OpVisitor {
 //				System.out.println("final:"+n.getKey()+","+n.getValue());
 //			}
 			
-			//eliminate phase
-			Set<Triple> missingTriples = new HashSet<Triple>();
-			for(Triple pattern:patterns) {
-				Boolean isNotRepresented = true;
-				for(SelectedNode n:selectedNodes) {
-					if(n.getBinding().equals(pattern)) {
-						isNotRepresented = false;
-						break;
-					}
-				}
-				if(isNotRepresented)
-					missingTriples.add(pattern);
-			}
-			Queue<Triple> search = new LinkedList<Triple>();
-			Set<Triple> removeList = new HashSet<Triple>();		
-			
-			for(Triple t:missingTriples) {
-//				System.out.println("missing:"+t);
-				search.add(t);
-				removeList.add(t);
-			}
-				
-				
-			while(!search.isEmpty()) {
-				Triple t = search.poll();
-				for(Triple pattern:patterns) {
-					if(pattern.getSubject().equals(t.getObject()) || pattern.getObject().equals(t.getSubject()) || pattern.getSubject().equals(t.getSubject())) {
-//						System.out.println("remove:"+pattern);
-						if(!removeList.contains(pattern)) {
-//							System.out.println(pattern);
-							search.add(pattern);
-							removeList.add(pattern);
-						}
-					}
-				}
-			}
-			
-			for(Triple t:removeList) {
-				for (Iterator<SelectedNode> iterator = selectedNodes.iterator(); iterator.hasNext();) {
-					SelectedNode n = iterator.next();
-				    if (n.getBinding().equals(t)) {
-				        iterator.remove();
-				    }
-				}
-			}
-			
-			for(SelectedNode n:selectedNodes) {
-//				System.out.println(n);
-				if(n.isLeafValue()) {
-					if(!n.isFixedValue()) {
-						String modifier = "";
-						if(!whereClause.trim().equals("WHERE")) {
-							modifier = " AND ";
-						}
-						whereClause += modifier + n.getWherePart();
-					}
-				} else if(n.isLeafMap()) {
-	//				System.out.println(n.getVar() + ":" + n.getTable() + "." + n.getColumn());
-					if(n.isFixedValue()) {
-						varMapping.put(n.getVar(), n.getColumn());
-					} else {
-						varMapping.put(n.getVar(), n.getTable() + "." + n.getColumn());
-						tableList.add(n.getTable());
-					}
-				} else if(n.isObjectVar) {
-					varMapping.put(n.getVar(), "'" + n.getObjectUri() + "'");
-				}
-				if(n.isSubjectLeafMap()) {
-	//				System.out.println(n.getSubjectVar() + ":" + n.getSubjectTable() + "." + n.getSubjectColumn());
-					varMapping.put(n.getSubjectVar(), n.getSubjectTable() + "." + n.getSubjectColumn());
-					tableList.add(n.getSubjectTable());
-				} else if(n.isSubjectVar) {
-					varMapping.put(n.getSubjectVar(), "'" + n.getSubjectUri() + "'");
-				}
-			}
 
-			List<SelectedNode> nodesCopy = new ArrayList<SelectedNode>();
-			nodesCopy.addAll(selectedNodes);
-			selectedNodes.clear();
-			allSelectedNodes.add(nodesCopy);
 		}
+		//eliminate phase
+		Set<Triple> missingTriples = new HashSet<Triple>();
+		for(Triple pattern:patterns) {
+			Boolean isNotRepresented = true;
+			for(SelectedNode n:selectedNodes) {
+				if(n.getBinding().equals(pattern)) {
+					isNotRepresented = false;
+					break;
+				}
+			}
+			if(isNotRepresented)
+				missingTriples.add(pattern);
+		}
+		Queue<Triple> search = new LinkedList<Triple>();
+		Set<Triple> removeList = new HashSet<Triple>();		
+		
+		for(Triple t:missingTriples) {
+//			System.out.println("missing:"+t);
+			search.add(t);
+			removeList.add(t);
+		}
+			
+			
+		while(!search.isEmpty()) {
+			Triple t = search.poll();
+			for(Triple pattern:patterns) {
+				if(pattern.getSubject().equals(t.getObject()) || pattern.getObject().equals(t.getSubject()) || pattern.getSubject().equals(t.getSubject())) {
+//					System.out.println("remove:"+pattern);
+					if(!removeList.contains(pattern)) {
+//						System.out.println(pattern);
+						search.add(pattern);
+						removeList.add(pattern);
+					}
+				}
+			}
+		}
+		
+		for(Triple t:removeList) {
+			for (Iterator<SelectedNode> iterator = selectedNodes.iterator(); iterator.hasNext();) {
+				SelectedNode n = iterator.next();
+			    if (n.getBinding().equals(t)) {
+			        iterator.remove();
+			    }
+			}
+		}
+		
+		for(SelectedNode n:selectedNodes) {
+//			System.out.println(n);
+			if(n.isLeafValue()) {
+				if(!n.isFixedValue()) {
+					String modifier = "";
+					if(!whereClause.trim().equals("WHERE")) {
+						modifier = " AND ";
+					}
+					whereClause += modifier + n.getWherePart();
+				}
+			} else if(n.isLeafMap()) {
+//				System.out.println(n.getVar() + ":" + n.getTable() + "." + n.getColumn());
+				if(n.isFixedValue()) {
+					varMapping.put(n.getVar(), n.getColumn());
+				} else {
+					varMapping.put(n.getVar(), n.getTable() + "." + n.getColumn());
+					tableList.add(n.getTable());
+				}
+			} else if(n.isObjectVar) {
+				varMapping.put(n.getVar(), "'" + n.getObjectUri() + "'");
+			}
+			if(n.isSubjectLeafMap()) {
+//				System.out.println(n.getSubjectVar() + ":" + n.getSubjectTable() + "." + n.getSubjectColumn());
+				varMapping.put(n.getSubjectVar(), n.getSubjectTable() + "." + n.getSubjectColumn());
+				tableList.add(n.getSubjectTable());
+			} else if(n.isSubjectVar) {
+				varMapping.put(n.getSubjectVar(), "'" + n.getSubjectUri() + "'");
+			}
+		}
+
+		List<SelectedNode> nodesCopy = new ArrayList<SelectedNode>();
+		nodesCopy.addAll(selectedNodes);
+		selectedNodes.clear();
+		allSelectedNodes.add(nodesCopy);
 	}
 	
 	public void graphTraverse(List<Triple> patterns, Triple t, Model model) {
@@ -737,6 +739,7 @@ public class SparqlOpVisitor implements OpVisitor {
 				whereClause += modifier + filterStr;
 			}
 		}
+		filterList.clear();
 		
 		if(tableList.size()>1) {
 //			System.out.println("joins required");
@@ -774,7 +777,7 @@ public class SparqlOpVisitor implements OpVisitor {
 					}
 				}
 			}
-			if(!whereClause.trim().equals("WHERE"))
+			if(!whereClause.trim().equals("WHERE") && !joinExpression.trim().equals(""))
 				whereClause += " AND ";
 			whereClause += " " + joinExpression + " ";
 		}
