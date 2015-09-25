@@ -186,16 +186,20 @@ public class SparqlOpVisitor implements OpVisitor {
 				if(n.isFixedValue()) {
 					varMapping.put(n.getVar(), n.getColumn());
 				} else {
-					varMapping.put(n.getVar(), n.getTable() + "." + n.getColumn());
-					tableList.add(n.getTable());
+					if(!n.getVar().equals("")) {
+						varMapping.put(n.getVar(), n.getTable() + "." + n.getColumn());
+						tableList.add(n.getTable());
+					}
 				}
 			} else if(n.isObjectVar) {
 				varMapping.put(n.getVar(), "'" + n.getObjectUri() + "'");
 			}
 			if(n.isSubjectLeafMap()) {
 //				System.out.println(n.getSubjectVar() + ":" + n.getSubjectTable() + "." + n.getSubjectColumn());
-				varMapping.put(n.getSubjectVar(), n.getSubjectTable() + "." + n.getSubjectColumn());
-				tableList.add(n.getSubjectTable());
+				if(!n.getSubjectVar().equals("")) {
+					varMapping.put(n.getSubjectVar(), n.getSubjectTable() + "." + n.getSubjectColumn());
+					tableList.add(n.getSubjectTable());
+				}
 			} else if(n.isSubjectVar) {
 				varMapping.put(n.getSubjectVar(), "'" + n.getSubjectUri() + "'");
 			}
@@ -783,15 +787,6 @@ public class SparqlOpVisitor implements OpVisitor {
 		}
 		selectedNodes.clear(); //clear the selected node list from any bgps below this projection
 		
-		int count = 0; //add from tables
-		for(String table:tableList) {
-			if(count++>0) {
-				fromClause += " , ";
-			}
-			fromClause += table;
-		}
-		tableList.clear();
-		
 //		System.out.println("project");
 //		if(!previousSelect.equals("")) {//previous projection
 ////			if(!whereClause.trim().equals("WHERE")) {
@@ -804,7 +799,7 @@ public class SparqlOpVisitor implements OpVisitor {
 //			fromClause += " (" + previousSelect + ") ";
 //		}
 		
-		count=0;
+		int count=0;
 		for(Var var:arg0.getVars()) {
 			if(count++>0) {
 				selectClause += " , ";
@@ -820,6 +815,7 @@ public class SparqlOpVisitor implements OpVisitor {
 				if(!rdmsName.equals(var.getName())) {
 					selectClause += " AS " + var.getName();
 				}
+//				FormatUtil.processTableName(rdmsName);
 				//TODO:take care of NULL
 				varMapping.put(var.getName(), var.getName());
 //				projections += var.getName();
@@ -829,6 +825,15 @@ public class SparqlOpVisitor implements OpVisitor {
 //				count--;
 			}
 		}
+		
+		count = 0; //add from tables
+		for(String table:tableList) {
+			if(count++>0) {
+				fromClause += " , ";
+			}
+			fromClause += table;
+		}
+		tableList.clear();
 		
 		//has union
 		if(!unionList.isEmpty()) {
