@@ -747,25 +747,28 @@ public class SparqlOpVisitor implements OpVisitor {
 		
 		if(tableList.size()>1) {
 //			System.out.println("joins required");
-			Map<String, Set<String>> joinMap = new HashMap<String,Set<String>>(); 
-			for(SelectedNode node:selectedNodes) {
-				if(node.isLeafMap()) {
-					String var = node.getVar();
-					Set<String> cols = joinMap.get(var);
-					if(cols==null) {
-						cols = new HashSet<String>();
+			Map<String, Set<String>> joinMap = new HashMap<String,Set<String>>();
+			for(List<SelectedNode> selN:allSelectedNodes) {
+				for(SelectedNode node:selN) {
+//					System.out.println("woot");
+					if(node.isLeafMap()) {
+						String var = node.getVar();
+						Set<String> cols = joinMap.get(var);
+						if(cols==null) {
+							cols = new HashSet<String>();
+						}
+						cols.add(node.getTable()+"."+node.getColumn());
+						joinMap.put(var, cols);
 					}
-					cols.add(node.getTable()+"."+node.getColumn());
-					joinMap.put(var, cols);
-				}
-				if(node.isSubjectLeafMap()) {
-					String var = node.getSubjectVar();
-					Set<String> cols = joinMap.get(var);
-					if(cols==null) {
-						cols = new HashSet<String>();
+					if(node.isSubjectLeafMap()) {
+						String var = node.getSubjectVar();
+						Set<String> cols = joinMap.get(var);
+						if(cols==null) {
+							cols = new HashSet<String>();
+						}
+						cols.add(node.getSubjectTable()+"."+node.getSubjectColumn());
+						joinMap.put(var, cols);
 					}
-					cols.add(node.getSubjectTable()+"."+node.getSubjectColumn());
-					joinMap.put(var, cols);
 				}
 			}
 			
@@ -785,7 +788,7 @@ public class SparqlOpVisitor implements OpVisitor {
 				whereClause += " AND ";
 			whereClause += " " + joinExpression + " ";
 		}
-		selectedNodes.clear(); //clear the selected node list from any bgps below this projection
+		allSelectedNodes.clear(); //clear the selected node list from any bgps below this projection
 		
 //		System.out.println("project");
 //		if(!previousSelect.equals("")) {//previous projection
