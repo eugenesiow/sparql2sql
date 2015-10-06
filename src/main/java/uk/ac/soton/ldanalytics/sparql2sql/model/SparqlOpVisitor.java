@@ -4,17 +4,22 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.Queue;
 import java.util.Set;
 
 import uk.ac.soton.ldanalytics.sparql2sql.util.FormatUtil;
 
 import com.hp.hpl.jena.graph.Node;
 import com.hp.hpl.jena.graph.Triple;
+import com.hp.hpl.jena.query.ARQ;
+import com.hp.hpl.jena.query.Query;
+import com.hp.hpl.jena.query.QueryExecution;
+import com.hp.hpl.jena.query.QueryExecutionFactory;
+import com.hp.hpl.jena.query.QueryFactory;
+import com.hp.hpl.jena.query.ResultSet;
+import com.hp.hpl.jena.query.ResultSetFormatter;
 import com.hp.hpl.jena.rdf.model.Model;
 import com.hp.hpl.jena.rdf.model.Property;
 import com.hp.hpl.jena.rdf.model.RDFNode;
@@ -58,6 +63,9 @@ import com.hp.hpl.jena.sparql.algebra.op.OpTriple;
 import com.hp.hpl.jena.sparql.algebra.op.OpUnion;
 import com.hp.hpl.jena.sparql.core.Var;
 import com.hp.hpl.jena.sparql.core.VarExprList;
+import com.hp.hpl.jena.sparql.core.Vars;
+import com.hp.hpl.jena.sparql.engine.binding.Binding;
+import com.hp.hpl.jena.sparql.engine.main.StageGenerator;
 import com.hp.hpl.jena.sparql.expr.Expr;
 import com.hp.hpl.jena.sparql.expr.ExprAggregator;
 import com.hp.hpl.jena.sparql.expr.ExprWalker;
@@ -105,110 +113,57 @@ public class SparqlOpVisitor implements OpVisitor {
 	}
 
 	public void visit(OpBGP bgp) {
-		bgpStarted = true;
-		List<Triple> patterns = bgp.getPattern().getList();
+		List<Triple> patterns = bgp.getPattern().getList();	
 		for(Model model:mapping.getMapping()) {
-			
-//			for(Triple t:patterns) {
-//				System.out.println("triple:"+t);
-//				graphTraverse(t,model);
-//			}
+			String queryStr = "SELECT * WHERE {\n";
 			for(Triple pattern:patterns) {
-//				System.out.println("parentt:"+pattern);
-				traversedNodes.clear();
-				if(!traversedTriples.contains(pattern))
-					graphTraverse(patterns,pattern,model);
+				queryStr += "\t"+nodeToString(pattern.getSubject())+" "+nodeToString(pattern.getPredicate())+" "+nodeToString(pattern.getObject())+".\n"; 
 			}
-//			for(Entry<Node,Node> n:finalSelNodes.entrySet()) {
-//				System.out.println("final:"+n.getKey()+","+n.getValue());
-//			}
+			queryStr += "}";
 			
+//			System.out.println(queryStr);
+			
+			Query query = QueryFactory.create(queryStr);
 
-		}
-		//eliminate phase
-		Set<Triple> missingTriples = new HashSet<Triple>();
-		for(Triple pattern:patterns) {
-			Boolean isNotRepresented = true;
-			for(SelectedNode n:selectedNodes) {
-				if(n.getBinding().equals(pattern)) {
-					isNotRepresented = false;
-					break;
-				}
-			}
-			if(isNotRepresented)
-				missingTriples.add(pattern);
-		}
-		Queue<Triple> search = new LinkedList<Triple>();
-		Set<Triple> removeList = new HashSet<Triple>();		
-		
-		for(Triple t:missingTriples) {
-//			System.out.println("missing:"+t);
-			search.add(t);
-			removeList.add(t);
-		}
+			QueryExecution qe = QueryExecutionFactory.create(query, model);
 			
+			StageGenerator origStageGen = (StageGenerator)qe.getContext().get(ARQ.stageGenerator) ;
+            StageGenerator stageGenAlt = new StageGeneratorAlt(origStageGen) ;
+            qe.getContext().set(ARQ.stageGenerator, stageGenAlt) ;
 			
-		while(!search.isEmpty()) {
-			Triple t = search.poll();
-			for(Triple pattern:patterns) {
-				if(pattern.getSubject().equals(t.getObject()) || pattern.getObject().equals(t.getSubject()) || pattern.getSubject().equals(t.getSubject())) {
-//					System.out.println("remove:"+pattern);
-					if(!removeList.contains(pattern)) {
-//						System.out.println(pattern);
-						search.add(pattern);
-						removeList.add(pattern);
-					}
+			ResultSet results = qe.execSelect();
+			
+			while(results.hasNext()) {
+				Binding b = results.nextBinding();
+				Iterator<Var> v = b.vars();
+				while(v.hasNext()) {
+					Var currentV = v.next();
+					System.out.println(currentV+" "+b.get(currentV));
 				}
 			}
-		}
-		
-		for(Triple t:removeList) {
-			for (Iterator<SelectedNode> iterator = selectedNodes.iterator(); iterator.hasNext();) {
-				SelectedNode n = iterator.next();
-			    if (n.getBinding().equals(t)) {
-			        iterator.remove();
-			    }
-			}
-		}
-		
-		for(SelectedNode n:selectedNodes) {
-//			System.out.println(n);
-			if(n.isLeafValue()) {
-				if(!n.isFixedValue()) {
-					String modifier = "";
-					if(!whereClause.trim().equals("WHERE")) {
-						modifier = " AND ";
-					}
-					whereClause += modifier + n.getWherePart();
-				}
-			} else if(n.isLeafMap()) {
-//				System.out.println(n.getVar() + ":" + n.getTable() + "." + n.getColumn());
-				if(n.isFixedValue()) {
-					varMapping.put(n.getVar(), n.getColumn());
-				} else {
-					if(!n.getVar().equals("")) {
-						varMapping.put(n.getVar(), n.getTable() + "." + n.getColumn());
-						tableList.add(n.getTable());
-					}
-				}
-			} else if(n.isObjectVar) {
-				varMapping.put(n.getVar(), "'" + n.getObjectUri() + "'");
-			}
-			if(n.isSubjectLeafMap()) {
-//				System.out.println(n.getSubjectVar() + ":" + n.getSubjectTable() + "." + n.getSubjectColumn());
-				if(!n.getSubjectVar().equals("")) {
-					varMapping.put(n.getSubjectVar(), n.getSubjectTable() + "." + n.getSubjectColumn());
-					tableList.add(n.getSubjectTable());
-				}
-			} else if(n.isSubjectVar) {
-				varMapping.put(n.getSubjectVar(), "'" + n.getSubjectUri() + "'");
-			}
-		}
 
-		List<SelectedNode> nodesCopy = new ArrayList<SelectedNode>();
-		nodesCopy.addAll(selectedNodes);
-		selectedNodes.clear();
-		allSelectedNodes.add(nodesCopy);
+			ResultSetFormatter.out(System.out, results, query);
+
+			qe.close();
+		}
+	}
+	
+	private String nodeToString(Node node) {
+		if(node.isURI()) {
+			return "<"+node.toString()+">";
+		} else if(node.isLiteral()) {
+			String literal = "\""+node.getLiteralValue()+"\"";
+			if(node.getLiteralDatatypeURI()!=null) {
+				literal += "^^<"+node.getLiteralDatatypeURI()+">";
+			}
+			return literal;
+		} else {
+			String nodeStr = node.toString();
+			if(nodeStr.startsWith("??")) {
+				nodeStr = nodeStr.replace("??", "?bn");
+			}
+			return nodeStr;
+		}
 	}
 	
 	public void graphTraverse(List<Triple> patterns, Triple t, Model model) {
