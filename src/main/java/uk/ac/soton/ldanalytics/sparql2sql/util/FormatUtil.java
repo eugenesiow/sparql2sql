@@ -77,8 +77,9 @@ public class FormatUtil {
 
 	public static String mapVar(String varName, Map<String, String> varMapping) {
 		String mappedName = varName;
-		if(varMapping.containsKey(varName))
+		if(varMapping.containsKey(varName)) {
 			mappedName = varMapping.get(varName);
+		}
 		return mappedName;
 	}
 
@@ -103,6 +104,16 @@ public class FormatUtil {
 
 	public static String processLiteral(Node object) {
 		return object.getLiteral().getValue().toString();
+	}
+	
+	public static String processNode(Node n) {
+		if(n.isLiteral()) {
+			return processLiteral(n);
+		} else if(n.isURI()) {
+			return "<" + n.getURI() + ">";
+		} else {
+			return n.toString();
+		}
 	}
 
 	public static boolean isAggVar(Expr expr) {

@@ -19,13 +19,8 @@ import com.hp.hpl.jena.query.QueryExecution;
 import com.hp.hpl.jena.query.QueryExecutionFactory;
 import com.hp.hpl.jena.query.QueryFactory;
 import com.hp.hpl.jena.query.ResultSet;
-import com.hp.hpl.jena.query.ResultSetFormatter;
 import com.hp.hpl.jena.rdf.model.Model;
-import com.hp.hpl.jena.rdf.model.Property;
-import com.hp.hpl.jena.rdf.model.RDFNode;
 import com.hp.hpl.jena.rdf.model.Resource;
-import com.hp.hpl.jena.rdf.model.Statement;
-import com.hp.hpl.jena.rdf.model.StmtIterator;
 import com.hp.hpl.jena.sparql.algebra.OpVisitor;
 import com.hp.hpl.jena.sparql.algebra.op.OpAssign;
 import com.hp.hpl.jena.sparql.algebra.op.OpBGP;
@@ -63,7 +58,6 @@ import com.hp.hpl.jena.sparql.algebra.op.OpTriple;
 import com.hp.hpl.jena.sparql.algebra.op.OpUnion;
 import com.hp.hpl.jena.sparql.core.Var;
 import com.hp.hpl.jena.sparql.core.VarExprList;
-import com.hp.hpl.jena.sparql.core.Vars;
 import com.hp.hpl.jena.sparql.engine.binding.Binding;
 import com.hp.hpl.jena.sparql.engine.main.StageGenerator;
 import com.hp.hpl.jena.sparql.expr.Expr;
@@ -82,21 +76,11 @@ public class SparqlOpVisitor implements OpVisitor {
 	Map<String,String> aliases = new HashMap<String,String>();
 	Set<String> tableList = new HashSet<String>();
 	List<String> previousSelects = new ArrayList<String>();
-	Set<String> traversedNodes = new HashSet<String>();
-	Set<Triple> traversedTriples = new HashSet<Triple>();
-//	Set<Node> selNode = new HashSet<Node>();
-//	Set<Node> finalSelNode = new HashSet<Node>();
-//	Map<Node,Node> selNodes = new HashMap<Node,Node>();
-//	Map<Node,Node> finalSelNodes = new HashMap<Node,Node>();
-//	Set<NodeObj> selNodes = new HashSet<NodeObj>();
-//	Set<NodeObj> finalSelNodes = new HashSet<NodeObj>();
 	List<List<SelectedNode>> allSelectedNodes = new ArrayList<List<SelectedNode>>();
 	List<String> filterList = new ArrayList<String>();
 	List<String> unionList = new ArrayList<String>();
 	
-//	String previousSelect = "";
 	String selectClause = "SELECT ";
-//	String projections = "";
 	String fromClause = "FROM ";
 	String whereClause = "WHERE ";
 	String groupClause = "GROUP BY ";	
@@ -133,21 +117,36 @@ public class SparqlOpVisitor implements OpVisitor {
 			
 			ResultSet results = qe.execSelect();
 			
-			while(results.hasNext()) {
-				Binding b = results.nextBinding();
-				Iterator<Var> v = b.vars();
-				while(v.hasNext()) {
-					Var currentV = v.next();
-					System.out.println(currentV+" "+b.get(currentV));
-				}
-			}
+			ProcessResults(results);
 
-			ResultSetFormatter.out(System.out, results, query);
+//			ResultSetFormatter.out(System.out, results, query);
 
 			qe.close();
 		}
 	}
 	
+	private void ProcessResults(ResultSet results) {
+		while(results.hasNext()) {
+			Binding b = results.nextBinding();
+			Iterator<Var> v = b.vars();
+			while(v.hasNext()) {
+				Var currentV = v.next();
+				Node val = b.get(currentV);
+				if(currentV.toString().contains("_literal_")) {
+					//isLiteralInfo
+				} else {
+					if(val.isLiteral()) {
+						String[] parts = val.toString().split("\\.");
+						if(parts.length>1) {
+							tableList.add(parts[0]);
+						}
+					}
+					varMapping.put(currentV.toString().replace("?", ""), FormatUtil.processNode(val));
+				}
+			}
+		}
+	}
+
 	private String nodeToString(Node node) {
 		if(node.isURI()) {
 			return "<"+node.toString()+">";
@@ -166,305 +165,6 @@ public class SparqlOpVisitor implements OpVisitor {
 		}
 	}
 	
-	public void graphTraverse(List<Triple> patterns, Triple t, Model model) {
-		Node predicate = t.getPredicate();
-		Node object = t.getObject();
-		Node subject = t.getSubject(); 
-		Set<String> results = new HashSet<String>();
-//		List<SelectedNode> tempSel = new ArrayList<SelectedNode>();
-		for(Statement stmt:getStatements(subject,predicate,object,model)) {
-//			System.out.println("stmt:"+stmt+",t:"+t);
-
-			if(t.getSubject().isVariable() && t.getObject().isURI()) {
-				if(FormatUtil.compareUriPattern(t.getObject().getURI(), stmt.getObject().asResource().getURI())) {
-					SelectedNode node = new SelectedNode();
-					node.setStatement(stmt);
-					node.setBinding(t);
-					selectedNodes.add(node);
-				}
-			} 
-			Boolean subResult = graphTraverseR(patterns,t,model,stmt,"");
-			results.add(t.getPredicate()+"|"+t.getObject()+";"+subResult);
-			if(subResult) {
-				SelectedNode node = new SelectedNode();
-				node.setStatement(stmt);
-				node.setBinding(t);
-				selectedNodes.add(node);
-			}
-//			System.out.println(t.getPredicate()+"|"+t.getObject()+";"+subResult);
-		}
-		Boolean add = true;
-		for(String resultStr:results) {
-//			System.out.println("samplemain:"+resultStr);
-			String[] parts = resultStr.split(";");
-			if(parts.length>1) {
-				if(parts[1].equals("false")) {
-					if(!results.contains(parts[0]+";true")) {
-//						System.out.println("samplemain:ex");
-						add = false;
-					}
-				}
-			}
-		}
-		
-		if(add) {
-//			System.out.println("add:"+tempSelectedNodes.size());
-//			for(SelectedNode sel:tempSelectedNodes) {
-//				System.out.println("add:"+sel);
-//			}
-//			finalSelNodes.addAll(selNodes);
-//			finalSelNodes.putAll(selNodes);
-			selectedNodes.addAll(tempSelectedNodes);
-			tempSelectedNodes.clear();
-//			finalSelNode.addAll(selNode);
-		} else {
-			tempSelectedNodes.clear();
-		}
-	}
-	
-	public Boolean graphTraverseR(List<Triple> patterns, Triple t, Model model, Statement stmt, String fmt) {
-		Set<String> results = new HashSet<String>();
-//		SelectedNode pnode = new SelectedNode();
-//		pnode.setStatement(stmt);
-//		pnode.setBinding(t);
-//		tempSelectedNodes.add(pnode);
-		for(Triple currentT:patterns) {
-			Node currentS = currentT.getSubject();
-			Node currentP = currentT.getPredicate();
-			Node currentO = currentT.getObject();
-			Node s = t.getSubject();
-			Node o = t.getObject();
-			Resource sO = stmt.getObject().isResource() ? stmt.getObject().asResource() : null;
-			if(o.equals(currentS)) {
-				if(sO!=null) {
-					RDFNode nodeO = null;
-					StmtIterator stmts = model.listStatements(sO, model.createProperty(currentP.getURI()), nodeO);
-					while(stmts.hasNext()) {
-						Statement sStmt = stmts.next();
-						if(currentO.isURI()) {
-							if(sStmt.getObject().isResource()) {
-								if(!sStmt.getObject().asResource().getURI().equals(currentO.getURI())) {
-//									System.out.println(fmt+"hitfalse:"+sStmt+" t:"+currentT);
-//									traversedTriples.add(currentT);
-									return false;
-								} else {
-									SelectedNode node = new SelectedNode();
-									node.setStatement(sStmt);
-									node.setBinding(currentT);
-									tempSelectedNodes.add(node);
-								}
-							}
-						} else if(currentO.isVariable()) {
-							String nodeStr = sStmt.getSubject().toString()+":"+currentP.toString()+":"+sStmt.getObject().toString();
-							if(!traversedNodes.contains(nodeStr)) {
-								traversedNodes.add(nodeStr);
-//								selNodes.add(new NodeObj(sStmt.getObject().asNode(),currentT.getObject()));
-//								selNodes.put(currentT.getObject(), sStmt.getObject().asNode());
-								SelectedNode node = new SelectedNode();
-								node.setStatement(sStmt);
-								node.setBinding(currentT);
-								tempSelectedNodes.add(node);
-								if(sStmt.getObject().isResource() || sStmt.getObject().isAnon()) {
-//									System.out.println(fmt+"s:"+sStmt+" t:"+currentT);
-									Boolean subResult = graphTraverseR(patterns,currentT,model,sStmt,fmt+"\t");
-									results.add(currentT.getPredicate()+"|"+currentT.getObject()+";"+subResult);
-//									if(subResult==false)
-//										System.out.println(fmt+"sfalse:"+currentT);
-								}
-								else if(sStmt.getObject().isLiteral()) {
-//									selNode.add(sStmt.getObject().asNode());
-//									System.out.println(fmt+"literal:"+sStmt.getObject()+" t:"+currentT.getObject());
-								}
-							}
-						} 
-						else if(currentO.isLiteral()) {
-							if(sStmt.getObject().isLiteral()) {
-								String lit1 = sStmt.getObject().asLiteral().toString();
-								String lit2 = currentO.getLiteralValue().toString();
-								if(!lit1.equals(lit2)) {
-//									System.out.println(fmt+"hitfalse_literal:"+sStmt.getObject().asLiteral()+","+currentO.getLiteralValue()+","+sStmt.getObject().asLiteral().equals(currentO.getLiteralValue()));
-//									traversedTriples.add(currentT);
-									return false;
-								} else {
-									SelectedNode node = new SelectedNode();
-									node.setStatement(sStmt);
-									node.setBinding(currentT);
-									tempSelectedNodes.add(node);
-								}
-							}
-						}
-					}
-//					traversedTriples.add(currentT);
-				}
-				
-			}
-			if(s.equals(currentS) && !o.equals(currentO)) {
-//			if(s.equals(currentS)) {
-				Resource sS = stmt.getSubject();
-				if(sS!=null) {
-					Resource nodeO = null;
-//					System.out.println("o:"+sO+":"+currentS);
-					StmtIterator stmts = model.listStatements(sS, model.createProperty(currentP.getURI()), nodeO);
-					while(stmts.hasNext()) {
-						Statement sStmt = stmts.next();
-//						System.out.println(sStmt);
-						if(currentO.isURI()) {
-							if(sStmt.getObject().isResource()) {
-								if(!sStmt.getObject().asResource().getURI().equals(currentO.getURI())) {
-//									System.out.println("hitfalse:"+sStmt+" t:"+currentT);
-//									traversedTriples.add(currentT);
-									return false;
-								}
-								else {
-									SelectedNode node = new SelectedNode();
-									node.setStatement(sStmt);
-									node.setBinding(currentT);
-									tempSelectedNodes.add(node);
-								}
-							}
-						} else if(currentO.isVariable()) {
-							String nodeStr = sStmt.getSubject().toString()+":"+currentP.toString()+":"+sStmt.getObject().toString();
-							if(!traversedNodes.contains(nodeStr)) {
-								traversedNodes.add(nodeStr);
-//								selNodes.add(new NodeObj(sStmt.getObject().asNode(),currentT.getObject()));
-//								selNodes.put(currentT.getObject(), sStmt.getObject().asNode());
-								SelectedNode node = new SelectedNode();
-								node.setStatement(sStmt);
-								node.setBinding(currentT);;
-								tempSelectedNodes.add(node);
-								if(sStmt.getObject().isResource() || sStmt.getObject().isAnon()) {
-//									System.out.println(fmt+"p:"+sStmt+" t:"+currentT);
-									Boolean subResult = graphTraverseR(patterns,currentT,model,sStmt,fmt+"\t");
-									results.add(currentT.getPredicate()+"|"+currentT.getObject()+";"+subResult);
-//									if(subResult==false)
-//										System.out.println(fmt+"pfalse:"+currentT);
-								} 
-								else if(sStmt.getObject().isLiteral()) {
-//									selNode.add(sStmt.getObject().asNode());
-//									System.out.println(fmt+"literala:"+sStmt.getObject()+" t:"+currentT);
-								}
-							}
-						}
-						else if(currentO.isLiteral()) {
-							if(sStmt.getObject().isLiteral()) {
-								String lit1 = sStmt.getObject().asLiteral().toString();
-								String lit2 = currentO.getLiteralValue().toString();
-								if(!lit1.equals(lit2)) {
-//									System.out.println(fmt+"hitfalse_literal:"+sStmt.getObject().asLiteral()+","+currentO.getLiteralValue()+","+sStmt.getObject().asLiteral().equals(currentO.getLiteralValue()));
-//									traversedTriples.add(currentT);
-									return false;
-								} else {
-									SelectedNode node = new SelectedNode();
-									node.setStatement(sStmt);
-									node.setBinding(currentT);
-									tempSelectedNodes.add(node);
-								}
-							}
-						}
-					}
-//					traversedTriples.add(currentT);
-				}
-			}
-			if(s.equals(currentO)) {
-				Resource sS = stmt.getSubject();
-				if(sS!=null) {
-					Resource nodeO = null;
-//					System.out.println("o:"+sO+":"+currentS);
-					StmtIterator stmts = model.listStatements(nodeO, model.createProperty(currentP.getURI()), sS);
-					while(stmts.hasNext()) {
-						Statement sStmt = stmts.next();
-						if(!stmt.getObject().equals(sStmt.getObject())) {
-							if(sStmt.getSubject().isResource() || sStmt.getSubject().isAnon()) {
-								String nodeStr = sStmt.getSubject().toString()+":"+currentP.toString()+":"+sStmt.getObject().toString();
-								if(!traversedNodes.contains(nodeStr)) {
-									SelectedNode node = new SelectedNode();
-									node.setStatement(sStmt);
-									node.setBinding(currentT);
-									tempSelectedNodes.add(node);
-									currentT = Triple.create(currentT.getObject(), currentT.getPredicate(), currentT.getSubject());
-									sStmt = model.createStatement(sStmt.getObject().asResource(), sStmt.getPredicate(), model.asRDFNode(sStmt.getSubject().asNode()));									
-									traversedNodes.add(nodeStr);
-//									System.out.println(fmt+"o:"+sStmt+" t:"+currentT);
-									Boolean subResult = graphTraverseR(patterns,currentT,model,sStmt,fmt+"\t");
-									results.add(currentT.getPredicate()+"|"+currentT.getObject()+";"+subResult);
-//									if(subResult==false)
-//										System.out.println(fmt+"ofalse:"+currentT);
-								}
-							}
-						}
-					}
-//					traversedTriples.add(currentT);
-				}
-			}
-		}
-		for(String resultStr:results) {
-//			System.out.println(fmt+"sample:"+resultStr+" parent:"+t);
-			String[] parts = resultStr.split(";");
-			if(parts.length>1) {
-				if(parts[1].equals("false")) {
-					if(!results.contains(parts[0]+";true")) {
-//						System.out.println("hitsthis");
-//						selNodes.clear();
-//						for(SelectedNode n:tempSelectedNodes) {
-//							if(n.getSubjectVar().equals("sensor"))
-//								System.out.println("cleared:"+n);
-//						}
-//						System.out.println("cleared_count:"+tempSelectedNodes.size());
-						tempSelectedNodes.clear();
-//						selNode.clear();
-						return false;
-					}
-				}
-			}
-		}
-//		System.out.println(fmt+"--");
-		return true;
-	}
-
-	private List<Statement> getStatements(Node subject, Node predicate, Node object, Model model) {
-		Resource s = subject.isBlank() ? model.asRDFNode(subject).asResource():null;
-		Property p = predicate.isVariable() ? null : model.createProperty(predicate.getURI());
-		RDFNode o = object.isBlank() ? model.asRDFNode(object) : null;
-
-		StmtIterator stmts = model.listStatements(s, p, o);
-		List<Statement> stmtList = new ArrayList<Statement>();
-		while(stmts.hasNext()) {
-			Boolean addStatement = true;
-			Statement stmt = stmts.next();
-//			System.out.println(subject);
-			if(!subject.isVariable()) {
-				if(!stmt.getSubject().isAnon()) {
-					String uri = stmt.getSubject().getURI();
-					if(uri.contains("{")) {
-						addStatement = FormatUtil.compareUriPattern(subject.getURI(),uri);
-					} else {
-						if(!uri.equals(subject.getURI()))
-							addStatement = false;
-					}
-				}
-			}
-			if(!object.isVariable()) {
-				RDFNode stmtObj = stmt.getObject();
-				if(object.isURI()) {
-					if(!stmtObj.isResource()) {
-						addStatement = false;
-					}
-					else if(!stmtObj.isAnon()) {
-						String uri = stmtObj.asResource().getURI();
-						if(uri.contains("{")) {
-							addStatement = FormatUtil.compareUriPattern(object.getURI(),uri);
-						} else {
-							if(!uri.equals(object.getURI()))
-								addStatement = false;
-						}
-					}
-				}
-			}
-			if(addStatement)
-				stmtList.add(stmt);
-		}
-		return stmtList;
-	}
 
 	public void visit(OpQuadPattern arg0) {
 		// TODO Auto-generated method stub

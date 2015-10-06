@@ -78,6 +78,7 @@ public class SparqlGroupExprVisitor implements ExprVisitor {
 			aggVal += FormatUtil.processExprType(expr, varMapping); 
 		}
 		aggVal += ")";
+//		System.out.println(aggVal);
 	}
 	
 	public String getAggKey() {

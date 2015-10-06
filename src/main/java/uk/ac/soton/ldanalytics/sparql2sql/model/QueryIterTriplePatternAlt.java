@@ -63,7 +63,7 @@ public class QueryIterTriplePatternAlt extends QueryIterRepeatApply
             Node o2 = tripleNode(o, "o") ;
             Graph graph = cxt.getActiveGraph() ;
             
-            System.out.println(s2 + " " + p2 + " " + o2);
+//            System.out.println(s2 + " " + p2 + " " + o2);
             
             ExtendedIterator<Triple> iter = graph.find(s2, p2, o2) ;
             // Stream.
@@ -108,6 +108,18 @@ public class QueryIterTriplePatternAlt extends QueryIterRepeatApply
 //            System.out.println(results);
             return results ;
         }
+        
+        public static void addInfoBinding(String type, Node val, BindingMap results) {
+        	int count = 0;
+        	Var v = Var.alloc("_literal_"+count);
+        	Node x = results.get(v) ;
+        	while(x!=null) {
+        		count++;
+        		v = Var.alloc("_literal"+count);
+            	x = results.get(v) ;
+        	}
+        	results.add(v, val);
+        }
 
         private static boolean insert(Node inputNode, Node outputNode, BindingMap results)
         {        	
@@ -123,7 +135,7 @@ public class QueryIterTriplePatternAlt extends QueryIterRepeatApply
         		String[] outParts = outVal.split("\\.");
         		if(outParts.length>1) {
         			if(!Character.isDigit(outParts[1].charAt(0))) {
-        				results.add(Var.alloc("literals"), NodeFactory.createLiteral(outVal+"="+inputNode));
+        				addInfoBinding("literal",NodeFactory.createLiteral(outVal+"="+inputNode),results);
         				return true;
         			}
         		}

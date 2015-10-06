@@ -236,8 +236,8 @@ public class test {
 				"  	?observation om-owl:observedProperty weather:_AirTemperature ;\n" + 
 				"               om-owl:result [ om-owl:floatValue ?temperature ] ;\n" + 
 				"               om-owl:samplingTime ?instant .\n" + 
-				"		?instant owl-time:inXSDDateTime \"1234\" .\n" + 
-//				"	FILTER (?time>\"2003-04-01T00:00:00\"^^xsd:dateTime && ?time<\"2003-04-02T00:00:00\"^^xsd:dateTime)\n" + 
+				"		?instant owl-time:inXSDDateTime ?time .\n" + 
+				"	FILTER (?time>\"2003-04-01T00:00:00\"^^xsd:dateTime && ?time<\"2003-04-02T00:00:00\"^^xsd:dateTime)\n" + 
 				"}\n" + 
 				"GROUP BY ?sensor";
 		
