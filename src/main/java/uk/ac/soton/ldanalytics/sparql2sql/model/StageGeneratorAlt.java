@@ -1,8 +1,5 @@
 package uk.ac.soton.ldanalytics.sparql2sql.model;
 
-import java.util.HashMap;
-import java.util.Map;
-
 import com.hp.hpl.jena.graph.Triple;
 import com.hp.hpl.jena.graph.impl.GraphBase;
 import com.hp.hpl.jena.sparql.core.BasicPattern;
@@ -36,7 +33,6 @@ public class StageGeneratorAlt implements StageGenerator {
         // Stream the triple matches together, one triple matcher at a time. 
         QueryIterator qIter = input ;
         for (Triple triple : pattern.getList()) {
-        	Map<String,String> literals = new HashMap<String,String>();
             qIter = new QueryIterTriplePatternAlt(qIter, triple, execCxt) ;
         }
         return qIter ;

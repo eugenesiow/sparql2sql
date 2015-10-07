@@ -20,7 +20,6 @@ import com.hp.hpl.jena.query.QueryFactory;
 import com.hp.hpl.jena.query.ResultSet;
 import com.hp.hpl.jena.query.ResultSetFormatter;
 import com.hp.hpl.jena.rdf.model.Model;
-import com.hp.hpl.jena.rdf.model.Resource;
 import com.hp.hpl.jena.sparql.algebra.OpVisitor;
 import com.hp.hpl.jena.sparql.algebra.op.OpAssign;
 import com.hp.hpl.jena.sparql.algebra.op.OpBGP;
@@ -67,16 +66,10 @@ import com.hp.hpl.jena.sparql.expr.ExprWalker;
 public class SparqlOpVisitor implements OpVisitor {
 	
 	RdfTableMapping mapping = null;
-	List<Node> eliminated = new ArrayList<Node>();
-	List<Resource> traversed = new ArrayList<Resource>();
-	Set<SNode> blacklist = new HashSet<SNode>();
-	List<SelectedNode> tempSelectedNodes = new ArrayList<SelectedNode>();
-	List<SelectedNode> selectedNodes = new ArrayList<SelectedNode>();
 	Map<String,String> varMapping = new HashMap<String,String>();
 	Map<String,String> aliases = new HashMap<String,String>();
 	Set<String> tableList = new HashSet<String>();
 	List<String> previousSelects = new ArrayList<String>();
-	List<List<SelectedNode>> allSelectedNodes = new ArrayList<List<SelectedNode>>();
 	List<String> filterList = new ArrayList<String>();
 	List<String> unionList = new ArrayList<String>();
 	List<Boolean> hasResults = new ArrayList<Boolean>();
@@ -301,27 +294,27 @@ public class SparqlOpVisitor implements OpVisitor {
 	}
 
 	public void visit(OpLeftJoin arg0) {
-		if(allSelectedNodes.size()>1) {
-			for(SelectedNode right:allSelectedNodes.get(1)) {
-				for(SelectedNode left:allSelectedNodes.get(0)) {
-					if(left.getSubject().equals(right.getSubject())) {
-						if(right.isLeafValue()) {
-							String modifier = "";
-							if(!whereClause.trim().equals("WHERE")) {
-								modifier = " AND ";
-							}
-							whereClause += modifier + right.getWherePart();
-						} else if(right.isLeafMap()) {
-			//				System.out.println(n.getVar() + ":" + n.getTable() + "." + n.getColumn());
-							varMapping.put(right.getVar(), right.getTable() + "." + right.getColumn());
-							tableList.add(right.getTable());
-						} else if(right.isObjectVar) {
-							varMapping.put(right.getVar(), "'" + right.getObjectUri() + "'");
-						}
-						break;
-					}
-				}
-			}
+		if(hasResults.size()>1) {
+//			for(SelectedNode right:allSelectedNodes.get(1)) {
+//				for(SelectedNode left:allSelectedNodes.get(0)) {
+//					if(left.getSubject().equals(right.getSubject())) {
+//						if(right.isLeafValue()) {
+//							String modifier = "";
+//							if(!whereClause.trim().equals("WHERE")) {
+//								modifier = " AND ";
+//							}
+//							whereClause += modifier + right.getWherePart();
+//						} else if(right.isLeafMap()) {
+//			//				System.out.println(n.getVar() + ":" + n.getTable() + "." + n.getColumn());
+//							varMapping.put(right.getVar(), right.getTable() + "." + right.getColumn());
+//							tableList.add(right.getTable());
+//						} else if(right.isObjectVar) {
+//							varMapping.put(right.getVar(), "'" + right.getObjectUri() + "'");
+//						}
+//						break;
+//					}
+//				}
+//			}
 		}
 	}
 

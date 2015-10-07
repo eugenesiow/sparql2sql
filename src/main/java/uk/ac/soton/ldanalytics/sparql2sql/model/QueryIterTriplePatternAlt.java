@@ -1,8 +1,5 @@
 package uk.ac.soton.ldanalytics.sparql2sql.model;
 
-import java.util.List;
-import java.util.Map;
-
 import com.hp.hpl.jena.graph.Graph;
 import com.hp.hpl.jena.graph.Node;
 import com.hp.hpl.jena.graph.NodeFactory;
@@ -19,7 +16,6 @@ import com.hp.hpl.jena.sparql.engine.iterator.QueryIterRepeatApply;
 import com.hp.hpl.jena.util.iterator.ClosableIterator;
 import com.hp.hpl.jena.util.iterator.ExtendedIterator;
 import com.hp.hpl.jena.util.iterator.NiceIterator;
-import com.hp.hpl.jena.util.iterator.WrappedIterator;
 
 public class QueryIterTriplePatternAlt extends QueryIterRepeatApply
 {
