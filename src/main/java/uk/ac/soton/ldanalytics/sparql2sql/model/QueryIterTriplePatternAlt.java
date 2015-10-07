@@ -1,5 +1,7 @@
 package uk.ac.soton.ldanalytics.sparql2sql.model;
 
+import uk.ac.soton.ldanalytics.sparql2sql.util.FormatUtil;
+
 import com.hp.hpl.jena.graph.Graph;
 import com.hp.hpl.jena.graph.Node;
 import com.hp.hpl.jena.graph.NodeFactory;
@@ -122,9 +124,11 @@ public class QueryIterTriplePatternAlt extends QueryIterRepeatApply
         	if(inputNode.isURI()) {
         		if(outputNode.isURI()) {
 	        		if(outputNode.getURI().contains("{")) {
+//	        			System.out.println(inputNode + " " + outputNode);
 	        			//check uri
-	        		}
-	        		if(!inputNode.equals(outputNode))
+	        			if(!FormatUtil.compareUriPattern(inputNode.getURI(), outputNode.getURI()))
+	        				return false;
+	        		} else if(!inputNode.equals(outputNode))
 	        			return false;
         		} else {
         			return false;

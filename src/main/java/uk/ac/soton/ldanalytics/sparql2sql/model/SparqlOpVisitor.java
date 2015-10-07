@@ -92,31 +92,30 @@ public class SparqlOpVisitor implements OpVisitor {
 
 	public void visit(OpBGP bgp) {
 		List<Triple> patterns = bgp.getPattern().getList();	
-		for(Model model:mapping.getMapping()) {
-			String queryStr = "SELECT * WHERE {\n";
-			for(Triple pattern:patterns) {
-				queryStr += "\t"+nodeToString(pattern.getSubject())+" "+nodeToString(pattern.getPredicate())+" "+nodeToString(pattern.getObject())+".\n"; 
-			}
-			queryStr += "}";
-			
-//			System.out.println(queryStr);
-			
-			Query query = QueryFactory.create(queryStr);
-
-			QueryExecution qe = QueryExecutionFactory.create(query, model);
-			
-			StageGenerator origStageGen = (StageGenerator)qe.getContext().get(ARQ.stageGenerator) ;
-            StageGenerator stageGenAlt = new StageGeneratorAlt(origStageGen) ;
-            qe.getContext().set(ARQ.stageGenerator, stageGenAlt) ;
-			
-			ResultSet results = qe.execSelect();
-			
-			hasResults.add(ProcessResults(results)); //check if there are results for the BGP
-
-//			ResultSetFormatter.out(System.out, results, query);
-
-			qe.close();
+		Model model = mapping.getCombinedMapping();
+		String queryStr = "SELECT * WHERE {\n";
+		for(Triple pattern:patterns) {
+			queryStr += "\t"+nodeToString(pattern.getSubject())+" "+nodeToString(pattern.getPredicate())+" "+nodeToString(pattern.getObject())+".\n"; 
 		}
+		queryStr += "}";
+		
+//			System.out.println(queryStr);
+		
+		Query query = QueryFactory.create(queryStr);
+
+		QueryExecution qe = QueryExecutionFactory.create(query, model);
+		
+		StageGenerator origStageGen = (StageGenerator)qe.getContext().get(ARQ.stageGenerator) ;
+        StageGenerator stageGenAlt = new StageGeneratorAlt(origStageGen) ;
+        qe.getContext().set(ARQ.stageGenerator, stageGenAlt) ;
+		
+		ResultSet results = qe.execSelect();
+		
+//		hasResults.add(ProcessResults(results)); //check if there are results for the BGP
+
+		ResultSetFormatter.out(System.out, results, query);
+
+		qe.close();
 	}
 	
 	private Boolean ProcessResults(ResultSet results) {
