@@ -20,12 +20,13 @@ import com.hp.hpl.jena.sparql.algebra.OpWalker;
 public class TestGenerateQueries {
 	public static void main(String[] args) {
 		String queryPath = "/Users/eugene/Dropbox/Private/WORK/LinkedSensorData/queries/";
-		String outputPath = "/Users/eugene/Dropbox/Private/WORK/LinkedSensorData/SQLqueries/";
+		String outputPath = "/Users/eugene/Dropbox/Private/WORK/LinkedSensorData/SQLqueries2/";
 		String mapPath = "/Users/eugene/Downloads/knoesis_observations_map_meta/4UT01.nt";
 		File folder = new File(queryPath);
 		
 		for(File file:folder.listFiles()) {
 			String tempFileName = file.getName();
+			System.out.println(tempFileName);
 			if(tempFileName.startsWith("."))
 				continue;
 			if(tempFileName.endsWith(".sparql")) {

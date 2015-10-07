@@ -124,12 +124,21 @@ public class QueryIterTriplePatternAlt extends QueryIterRepeatApply
         private static boolean insert(Node inputNode, Node outputNode, BindingMap results)
         {        	
         	if(inputNode.isURI()) {
-        		if(outputNode.getURI().contains("{")) {
-        			//check uri
-        		}
-        		if(!inputNode.equals(outputNode))
+        		if(outputNode.isURI()) {
+	        		if(outputNode.getURI().contains("{")) {
+	        			//check uri
+	        		}
+	        		if(!inputNode.equals(outputNode))
+	        			return false;
+        		} else {
         			return false;
+        		}
         	}
+//        	if(inputNode.isBlank() && outputNode.isBlank()) {
+//        		if(!inputNode.getBlankNodeId().equals(outputNode.getBlankNodeId())) {
+//        			return false;
+//        		}
+//        	}
         	if(inputNode.isLiteral()) {
         		String outVal = outputNode.getLiteralValue().toString();
         		String[] outParts = outVal.split("\\.");
@@ -143,7 +152,7 @@ public class QueryIterTriplePatternAlt extends QueryIterRepeatApply
 	        		if(!inputNode.getLiteralDatatype().equals(outputNode.getLiteralDatatype()))
 	        			return false;
         		}
-        		if(!inputNode.getLiteralValue().equals(outputNode.getLiteralValue()))
+        		if(!inputNode.getLiteralValue().toString().equals(outputNode.getLiteralValue().toString()))
         			return false;
         		return true;
         	}

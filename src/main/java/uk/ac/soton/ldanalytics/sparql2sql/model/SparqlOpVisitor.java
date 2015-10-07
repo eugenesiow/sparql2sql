@@ -6,7 +6,6 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Set;
 
 import uk.ac.soton.ldanalytics.sparql2sql.util.FormatUtil;
@@ -19,6 +18,7 @@ import com.hp.hpl.jena.query.QueryExecution;
 import com.hp.hpl.jena.query.QueryExecutionFactory;
 import com.hp.hpl.jena.query.QueryFactory;
 import com.hp.hpl.jena.query.ResultSet;
+import com.hp.hpl.jena.query.ResultSetFormatter;
 import com.hp.hpl.jena.rdf.model.Model;
 import com.hp.hpl.jena.rdf.model.Resource;
 import com.hp.hpl.jena.sparql.algebra.OpVisitor;
@@ -79,6 +79,7 @@ public class SparqlOpVisitor implements OpVisitor {
 	List<List<SelectedNode>> allSelectedNodes = new ArrayList<List<SelectedNode>>();
 	List<String> filterList = new ArrayList<String>();
 	List<String> unionList = new ArrayList<String>();
+	List<Boolean> hasResults = new ArrayList<Boolean>();
 	
 	String selectClause = "SELECT ";
 	String fromClause = "FROM ";
@@ -117,7 +118,7 @@ public class SparqlOpVisitor implements OpVisitor {
 			
 			ResultSet results = qe.execSelect();
 			
-			ProcessResults(results);
+			hasResults.add(ProcessResults(results)); //check if there are results for the BGP
 
 //			ResultSetFormatter.out(System.out, results, query);
 
@@ -125,8 +126,10 @@ public class SparqlOpVisitor implements OpVisitor {
 		}
 	}
 	
-	private void ProcessResults(ResultSet results) {
+	private Boolean ProcessResults(ResultSet results) {
+		Boolean hasResults = false;
 		while(results.hasNext()) {
+			hasResults = true;
 			Binding b = results.nextBinding();
 			Iterator<Var> v = b.vars();
 			while(v.hasNext()) {
@@ -136,7 +139,7 @@ public class SparqlOpVisitor implements OpVisitor {
 					//isLiteralInfo
 				} else {
 					if(val.isLiteral()) {
-						String[] parts = val.toString().split("\\.");
+						String[] parts = val.getLiteralValue().toString().split("\\.");
 						if(parts.length>1) {
 							tableList.add(parts[0]);
 						}
@@ -145,6 +148,7 @@ public class SparqlOpVisitor implements OpVisitor {
 				}
 			}
 		}
+		return hasResults;
 	}
 
 	private String nodeToString(Node node) {
@@ -322,11 +326,10 @@ public class SparqlOpVisitor implements OpVisitor {
 	}
 
 	public void visit(OpUnion arg0) {
-		int index = allSelectedNodes.size()-1;
+		int index = hasResults.size()-1;
 		int whereIndex = filterList.size()-1;
 		if(unionList.isEmpty()) {
-			List<SelectedNode> sel = allSelectedNodes.get(index-1);
-			if(!sel.isEmpty()) {
+			if(hasResults.get(index-1)) {
 				String unionStr = "SELECT * FROM ";
 				for(String tables:tableList)
 					unionStr += tables + " ";
@@ -334,8 +337,7 @@ public class SparqlOpVisitor implements OpVisitor {
 				unionList.add(unionStr);
 			}
 		}
-		List<SelectedNode> sel = allSelectedNodes.get(index);
-		if(!sel.isEmpty()) {
+		if(hasResults.get(index)) {
 			String unionStr = "SELECT * FROM ";
 			for(String tables:tableList)
 				unionStr += tables + " ";
@@ -400,63 +402,49 @@ public class SparqlOpVisitor implements OpVisitor {
 		}
 		filterList.clear();
 		
-		if(tableList.size()>1) {
-//			System.out.println("joins required");
-			Map<String, Set<String>> joinMap = new HashMap<String,Set<String>>();
-			for(List<SelectedNode> selN:allSelectedNodes) {
-				for(SelectedNode node:selN) {
-//					System.out.println("woot");
-					if(node.isLeafMap()) {
-						String var = node.getVar();
-						Set<String> cols = joinMap.get(var);
-						if(cols==null) {
-							cols = new HashSet<String>();
-						}
-						cols.add(node.getTable()+"."+node.getColumn());
-						joinMap.put(var, cols);
-					}
-					if(node.isSubjectLeafMap()) {
-						String var = node.getSubjectVar();
-						Set<String> cols = joinMap.get(var);
-						if(cols==null) {
-							cols = new HashSet<String>();
-						}
-						cols.add(node.getSubjectTable()+"."+node.getSubjectColumn());
-						joinMap.put(var, cols);
-					}
-				}
-			}
-			
-			String joinExpression = "";
-			for(Entry<String,Set<String>> joinItem:joinMap.entrySet()) {
-				if(joinItem.getValue().size()>1) {
-					int count = 0;
-					for(String column:joinItem.getValue()) {
-						if(count++>0) {
-							joinExpression += "=";
-						}
-						joinExpression += column;
-					}
-				}
-			}
-			if(!whereClause.trim().equals("WHERE") && !joinExpression.trim().equals(""))
-				whereClause += " AND ";
-			whereClause += " " + joinExpression + " ";
-		}
-		allSelectedNodes.clear(); //clear the selected node list from any bgps below this projection
-		
-//		System.out.println("project");
-//		if(!previousSelect.equals("")) {//previous projection
-////			if(!whereClause.trim().equals("WHERE")) {
-////				whereClause += " AND ";
-////			}
-////			whereClause += projections + " IN (" + previousSelect + ") ";
-//			if(!fromClause.trim().equals("FROM")) {
-//				fromClause += " , ";
+//		if(tableList.size()>1) { 
+//			Map<String, Set<String>> joinMap = new HashMap<String,Set<String>>();
+//			for(List<SelectedNode> selN:allSelectedNodes) {
+//				for(SelectedNode node:selN) {
+//					if(node.isLeafMap()) {
+//						String var = node.getVar();
+//						Set<String> cols = joinMap.get(var);
+//						if(cols==null) {
+//							cols = new HashSet<String>();
+//						}
+//						cols.add(node.getTable()+"."+node.getColumn());
+//						joinMap.put(var, cols);
+//					}
+//					if(node.isSubjectLeafMap()) {
+//						String var = node.getSubjectVar();
+//						Set<String> cols = joinMap.get(var);
+//						if(cols==null) {
+//							cols = new HashSet<String>();
+//						}
+//						cols.add(node.getSubjectTable()+"."+node.getSubjectColumn());
+//						joinMap.put(var, cols);
+//					}
+//				}
 //			}
-//			fromClause += " (" + previousSelect + ") ";
+//			
+//			String joinExpression = "";
+//			for(Entry<String,Set<String>> joinItem:joinMap.entrySet()) {
+//				if(joinItem.getValue().size()>1) {
+//					int count = 0;
+//					for(String column:joinItem.getValue()) {
+//						if(count++>0) {
+//							joinExpression += "=";
+//						}
+//						joinExpression += column;
+//					}
+//				}
+//			}
+//			if(!whereClause.trim().equals("WHERE") && !joinExpression.trim().equals(""))
+//				whereClause += " AND ";
+//			whereClause += " " + joinExpression + " ";
 //		}
-		
+//		allSelectedNodes.clear(); //clear the selected node list from any bgps below this projection
+			
 		int count=0;
 		for(Var var:arg0.getVars()) {
 			if(count++>0) {

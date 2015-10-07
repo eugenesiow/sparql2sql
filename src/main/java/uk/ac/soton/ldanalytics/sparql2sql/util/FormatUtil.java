@@ -110,7 +110,7 @@ public class FormatUtil {
 		if(n.isLiteral()) {
 			return processLiteral(n);
 		} else if(n.isURI()) {
-			return "<" + n.getURI() + ">";
+			return "'" + n.getURI() + "'";
 		} else {
 			return n.toString();
 		}
