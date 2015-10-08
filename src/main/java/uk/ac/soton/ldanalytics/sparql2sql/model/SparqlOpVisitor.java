@@ -83,7 +83,9 @@ public class SparqlOpVisitor implements OpVisitor {
 	Boolean bgpStarted = false;
 	
 	public SparqlOpVisitor() {
-
+		StageGenerator origStageGen = (StageGenerator)ARQ.getContext().get(ARQ.stageGenerator) ;
+        StageGenerator stageGenAlt = new StageGeneratorAlt(origStageGen) ;
+        ARQ.getContext().set(ARQ.stageGenerator, stageGenAlt) ;
 	}
 	
 	public void useMapping(RdfTableMapping mapping) {
@@ -91,6 +93,8 @@ public class SparqlOpVisitor implements OpVisitor {
 	}
 
 	public void visit(OpBGP bgp) {
+		bgpStarted = true;
+		
 		List<Triple> patterns = bgp.getPattern().getList();	
 		Model model = mapping.getCombinedMapping();
 		String queryStr = "SELECT * WHERE {\n";
@@ -105,9 +109,9 @@ public class SparqlOpVisitor implements OpVisitor {
 
 		QueryExecution qe = QueryExecutionFactory.create(query, model);
 		
-		StageGenerator origStageGen = (StageGenerator)qe.getContext().get(ARQ.stageGenerator) ;
-        StageGenerator stageGenAlt = new StageGeneratorAlt(origStageGen) ;
-        qe.getContext().set(ARQ.stageGenerator, stageGenAlt) ;
+//		StageGenerator origStageGen = (StageGenerator)qe.getContext().get(ARQ.stageGenerator) ;
+//        StageGenerator stageGenAlt = new StageGeneratorAlt(origStageGen) ;
+//        qe.getContext().set(ARQ.stageGenerator, stageGenAlt) ;
 		
 		ResultSet results = qe.execSelect();
 		
@@ -131,15 +135,20 @@ public class SparqlOpVisitor implements OpVisitor {
 			while(v.hasNext()) {
 				Var currentV = v.next();
 				Node val = b.get(currentV);
-				if(currentV.toString().contains("_literal_")) {
-					String[] parts = val.getLiteralValue().toString().split("\\.");
+				if(currentV.toString().contains("_info_")) {
+					String[] parts = val.getLiteralValue().toString().split("=");
 					if(parts.length>1) {
-						tableList.add(parts[0]);
+						for(int i=0;i<parts.length;i++) {
+							String[] subParts = parts[i].split("\\.");
+							if(subParts.length>1) {
+								if(!Character.isDigit(subParts[1].charAt(0)))
+									tableList.add(subParts[0]);
+							}
+						}
 					}
 					if(!whereClause.trim().equals("WHERE"))
 						whereClause += " AND ";
 					whereClause += val.getLiteralValue().toString();
-					//isLiteralInfo
 				} else {
 					if(val.isLiteral()) {
 						String[] parts = val.getLiteralValue().toString().split("\\.");

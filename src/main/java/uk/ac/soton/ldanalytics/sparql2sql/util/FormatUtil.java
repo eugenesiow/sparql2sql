@@ -123,7 +123,20 @@ public class FormatUtil {
 		if(n.isLiteral()) {
 			return processLiteral(n);
 		} else if(n.isURI()) {
-			return "'" + n.getURI() + "'";
+			String uri = n.getURI();
+			if(uri.contains("{")) {
+				String[] parts = uri.split("\\{");
+				uri = "CONCAT(";
+				for(int i=0;i<parts.length-1;i++) {
+					uri += "'"+parts[i]+"'";
+					String[] subParts = parts[i+1].split("}");
+					uri += "," + subParts[0];
+				}
+				uri+=")";
+			} else {
+				uri = "'" + uri + "'";
+			}
+			return uri;
 		} else {
 			return n.toString();
 		}

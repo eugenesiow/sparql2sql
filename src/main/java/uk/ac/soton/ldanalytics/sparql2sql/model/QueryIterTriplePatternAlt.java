@@ -111,13 +111,13 @@ public class QueryIterTriplePatternAlt extends QueryIterRepeatApply
             return results ;
         }
         
-        public static void addInfoBinding(String type, Node val, BindingMap results) {
+        public static void addInfoBinding(Node val, BindingMap results) {
         	int count = 0;
-        	Var v = Var.alloc("_literal_"+count);
+        	Var v = Var.alloc("_info_"+count);
         	Node x = results.get(v) ;
         	while(x!=null) {
         		count++;
-        		v = Var.alloc("_literal"+count);
+        		v = Var.alloc("_info_"+count);
             	x = results.get(v) ;
         	}
         	results.add(v, val);
@@ -139,8 +139,15 @@ public class QueryIterTriplePatternAlt extends QueryIterRepeatApply
 	        				
 	        				while(m.find()) {
 	        					if(cols.size()<=m.groupCount()) {
-		        					for(int i=1;i<=cols.size();i++)
-		        						addInfoBinding("literal",NodeFactory.createLiteral(cols.get(i-1)+"='"+m.group(i)+"'"),results);
+		        					for(int i=1;i<=cols.size();i++) {
+		        						String rightExpr = m.group(i);
+		        						if(rightExpr.startsWith("{")) {
+		        							rightExpr = rightExpr.replace("{", "").replace("}", "");
+		        						} else {
+		        							rightExpr = "'"+rightExpr+"'";
+		        						}
+		        						addInfoBinding(NodeFactory.createLiteral(cols.get(i-1)+"="+rightExpr),results);
+		        					}
 	        					}
 	        				}
 	        				
@@ -164,7 +171,7 @@ public class QueryIterTriplePatternAlt extends QueryIterRepeatApply
         		String[] outParts = outVal.split("\\.");
         		if(outParts.length>1) {
         			if(!Character.isDigit(outParts[1].charAt(0))) {
-        				addInfoBinding("literal",NodeFactory.createLiteral(outVal+"='"+inputNode.getLiteralValue().toString()+"'"),results);
+        				addInfoBinding(NodeFactory.createLiteral(outVal+"='"+inputNode.getLiteralValue().toString()+"'"),results);
         				return true;
         			}
         		}
