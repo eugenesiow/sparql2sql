@@ -66,6 +66,7 @@ import com.hp.hpl.jena.sparql.expr.ExprWalker;
 public class SparqlOpVisitor implements OpVisitor {
 	
 	RdfTableMapping mapping = null;
+	List<List<Binding>> bgpBindings = new ArrayList<List<Binding>>();
 	Map<String,String> varMapping = new HashMap<String,String>();
 	Map<String,String> aliases = new HashMap<String,String>();
 	Set<String> tableList = new HashSet<String>();
@@ -73,6 +74,7 @@ public class SparqlOpVisitor implements OpVisitor {
 	List<String> filterList = new ArrayList<String>();
 	List<String> unionList = new ArrayList<String>();
 	List<Boolean> hasResults = new ArrayList<Boolean>();
+	
 	
 	String selectClause = "SELECT ";
 	String fromClause = "FROM ";
@@ -128,39 +130,46 @@ public class SparqlOpVisitor implements OpVisitor {
 	
 	private Boolean ProcessResults(ResultSet results) {
 		Boolean hasResults = false;
+		List<Binding> bindingSet = new ArrayList<Binding>();
 		while(results.hasNext()) {
 			hasResults = true;
 			Binding b = results.nextBinding();
-			Iterator<Var> v = b.vars();
-			while(v.hasNext()) {
-				Var currentV = v.next();
-				Node val = b.get(currentV);
-				if(currentV.toString().contains("_info_")) {
-					String[] parts = val.getLiteralValue().toString().split("=");
-					if(parts.length>1) {
-						for(int i=0;i<parts.length;i++) {
-							String[] subParts = parts[i].split("\\.");
-							if(subParts.length>1) {
-								if(!Character.isDigit(subParts[1].charAt(0)))
-									tableList.add(subParts[0]);
-							}
+			bindingSet.add(b);
+			AddVarMappings(b);
+		}
+		bgpBindings.add(bindingSet);
+		return hasResults;
+	}
+
+	private void AddVarMappings(Binding b) {
+		Iterator<Var> v = b.vars();
+		while(v.hasNext()) {
+			Var currentV = v.next();
+			Node val = b.get(currentV);
+			if(currentV.toString().contains("_info_")) {
+				String[] parts = val.getLiteralValue().toString().split("=");
+				if(parts.length>1) {
+					for(int i=0;i<parts.length;i++) {
+						String[] subParts = parts[i].split("\\.");
+						if(subParts.length>1) {
+							if(!Character.isDigit(subParts[1].charAt(0)))
+								tableList.add(subParts[0]);
 						}
 					}
-					if(!whereClause.trim().equals("WHERE"))
-						whereClause += " AND ";
-					whereClause += val.getLiteralValue().toString();
-				} else {
-					if(val.isLiteral()) {
-						String[] parts = val.getLiteralValue().toString().split("\\.");
-						if(parts.length>1) {
-							tableList.add(parts[0]);
-						}
-					}
-					varMapping.put(currentV.toString().replace("?", ""), FormatUtil.processNode(val));
 				}
+				if(!whereClause.trim().equals("WHERE"))
+					whereClause += " AND ";
+				whereClause += val.getLiteralValue().toString();
+			} else {
+				if(val.isLiteral()) {
+					String[] parts = val.getLiteralValue().toString().split("\\.");
+					if(parts.length>1) {
+						tableList.add(parts[0]);
+					}
+				}
+				varMapping.put(currentV.toString().replace("?", ""), FormatUtil.processNode(val));
 			}
 		}
-		return hasResults;
 	}
 
 	private String nodeToString(Node node) {
@@ -314,26 +323,24 @@ public class SparqlOpVisitor implements OpVisitor {
 
 	public void visit(OpLeftJoin arg0) {
 		if(hasResults.size()>1) {
-//			for(SelectedNode right:allSelectedNodes.get(1)) {
-//				for(SelectedNode left:allSelectedNodes.get(0)) {
-//					if(left.getSubject().equals(right.getSubject())) {
-//						if(right.isLeafValue()) {
-//							String modifier = "";
-//							if(!whereClause.trim().equals("WHERE")) {
-//								modifier = " AND ";
-//							}
-//							whereClause += modifier + right.getWherePart();
-//						} else if(right.isLeafMap()) {
-//			//				System.out.println(n.getVar() + ":" + n.getTable() + "." + n.getColumn());
-//							varMapping.put(right.getVar(), right.getTable() + "." + right.getColumn());
-//							tableList.add(right.getTable());
-//						} else if(right.isObjectVar) {
-//							varMapping.put(right.getVar(), "'" + right.getObjectUri() + "'");
-//						}
-//						break;
-//					}
-//				}
-//			}
+			for(Binding right:bgpBindings.get(1)) {
+				for(Binding left:bgpBindings.get(0)) {
+//					System.out.println(right +" "+ left);
+					Iterator<Var> rightV = right.vars();
+					Boolean discardRow = false;
+					while(rightV.hasNext()) {
+						Var v = rightV.next();
+						if(left.contains(v)) {
+							if(!left.get(v).equals(right.get(v))) {
+								discardRow = true;
+								break;
+							}
+						}
+					}
+					if(!discardRow)
+						AddVarMappings(right);
+				}
+			}
 		}
 	}
 
