@@ -1,5 +1,9 @@
 package uk.ac.soton.ldanalytics.sparql2sql.model;
 
+import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
 import uk.ac.soton.ldanalytics.sparql2sql.util.FormatUtil;
 
 import com.hp.hpl.jena.graph.Graph;
@@ -126,7 +130,23 @@ public class QueryIterTriplePatternAlt extends QueryIterRepeatApply
 	        		if(outputNode.getURI().contains("{")) {
 //	        			System.out.println(inputNode + " " + outputNode);
 	        			//check uri
-	        			if(!FormatUtil.compareUriPattern(inputNode.getURI(), outputNode.getURI()))
+	        			if(FormatUtil.compareUriPattern(inputNode.getURI(), outputNode.getURI())) {
+	        				String pattern = outputNode.getURI()+";END";
+	        				String uri = inputNode.getURI()+";END";
+	        				List<String> cols = FormatUtil.extractCols(pattern);
+	        				pattern = pattern.replaceAll("\\{.*?}", "(.*?)");
+	        				Matcher m = Pattern.compile(pattern).matcher(uri);
+	        				
+	        				while(m.find()) {
+	        					if(cols.size()<=m.groupCount()) {
+		        					for(int i=1;i<=cols.size();i++)
+		        						addInfoBinding("literal",NodeFactory.createLiteral(cols.get(i-1)+"='"+m.group(i)+"'"),results);
+	        					}
+	        				}
+	        				
+	        				return true;
+	        			}
+	        			else
 	        				return false;
 	        		} else if(!inputNode.equals(outputNode))
 	        			return false;
@@ -144,7 +164,7 @@ public class QueryIterTriplePatternAlt extends QueryIterRepeatApply
         		String[] outParts = outVal.split("\\.");
         		if(outParts.length>1) {
         			if(!Character.isDigit(outParts[1].charAt(0))) {
-        				addInfoBinding("literal",NodeFactory.createLiteral(outVal+"="+inputNode),results);
+        				addInfoBinding("literal",NodeFactory.createLiteral(outVal+"='"+inputNode.getLiteralValue().toString()+"'"),results);
         				return true;
         			}
         		}

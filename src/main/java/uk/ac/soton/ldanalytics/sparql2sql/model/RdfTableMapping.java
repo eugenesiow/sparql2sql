@@ -2,10 +2,13 @@ package uk.ac.soton.ldanalytics.sparql2sql.model;
 
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
+import uk.ac.soton.ldanalytics.sparql2sql.util.FormatUtil;
 
 import com.hp.hpl.jena.graph.Node;
 import com.hp.hpl.jena.rdf.model.Model;
@@ -45,17 +48,13 @@ public class RdfTableMapping {
 		if(node.isURI()) {
 			String uri = node.getURI();
 			if(uri.contains("{")) {
-				String cols = "";
-				Matcher m = Pattern.compile("\\{(.*?)\\}").matcher(uri);
-				while(m.find()) {
-					cols += m.group(1);				
-				}
+				List<String> colList = FormatUtil.extractCols(uri);
 				uri = uri.replaceAll("\\{.*?}", "\\{\\}");
 				Set<String> existing = joinData.get(uri);
 				if(existing==null) {
 					existing = new HashSet<String>();
 				}
-				existing.add(cols);
+				existing.addAll(colList);
 				joinData.put(uri, existing);
 			}
 		}

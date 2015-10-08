@@ -1,7 +1,11 @@
 package uk.ac.soton.ldanalytics.sparql2sql.util;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import com.hp.hpl.jena.graph.Node;
 import com.hp.hpl.jena.sparql.expr.Expr;
@@ -91,6 +95,15 @@ public class FormatUtil {
 				return false;
 		}
 		return true;
+	}
+	
+	public static List<String> extractCols(String uri) {
+		List<String> cols = new ArrayList<String>();
+		Matcher m = Pattern.compile("\\{(.*?)\\}").matcher(uri);
+		while(m.find()) {
+			cols.add(m.group(1));				
+		}
+		return cols;
 	}
 
 	public static String handleExpr(Expr expr, Map<String, String> varMapping) {

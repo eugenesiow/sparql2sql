@@ -111,9 +111,13 @@ public class SparqlOpVisitor implements OpVisitor {
 		
 		ResultSet results = qe.execSelect();
 		
-//		hasResults.add(ProcessResults(results)); //check if there are results for the BGP
+		hasResults.add(ProcessResults(results)); //check if there are results for the BGP
 
-		ResultSetFormatter.out(System.out, results, query);
+//		ResultSetFormatter.out(System.out, results, query);
+//		while(results.hasNext()) {
+//			Binding b = results.nextBinding();
+//			System.out.println(b);
+//		}
 
 		qe.close();
 	}
@@ -128,6 +132,13 @@ public class SparqlOpVisitor implements OpVisitor {
 				Var currentV = v.next();
 				Node val = b.get(currentV);
 				if(currentV.toString().contains("_literal_")) {
+					String[] parts = val.getLiteralValue().toString().split("\\.");
+					if(parts.length>1) {
+						tableList.add(parts[0]);
+					}
+					if(!whereClause.trim().equals("WHERE"))
+						whereClause += " AND ";
+					whereClause += val.getLiteralValue().toString();
 					//isLiteralInfo
 				} else {
 					if(val.isLiteral()) {
