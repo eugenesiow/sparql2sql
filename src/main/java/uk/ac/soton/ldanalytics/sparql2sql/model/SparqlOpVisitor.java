@@ -4,23 +4,22 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Queue;
 import java.util.Set;
 
 import uk.ac.soton.ldanalytics.sparql2sql.util.FormatUtil;
 
 import com.hp.hpl.jena.graph.Node;
 import com.hp.hpl.jena.graph.Triple;
+import com.hp.hpl.jena.query.ARQ;
+import com.hp.hpl.jena.query.Query;
+import com.hp.hpl.jena.query.QueryExecution;
+import com.hp.hpl.jena.query.QueryExecutionFactory;
+import com.hp.hpl.jena.query.QueryFactory;
+import com.hp.hpl.jena.query.ResultSet;
+import com.hp.hpl.jena.query.ResultSetFormatter;
 import com.hp.hpl.jena.rdf.model.Model;
-import com.hp.hpl.jena.rdf.model.Property;
-import com.hp.hpl.jena.rdf.model.RDFNode;
-import com.hp.hpl.jena.rdf.model.Resource;
-import com.hp.hpl.jena.rdf.model.Statement;
-import com.hp.hpl.jena.rdf.model.StmtIterator;
 import com.hp.hpl.jena.sparql.algebra.OpVisitor;
 import com.hp.hpl.jena.sparql.algebra.op.OpAssign;
 import com.hp.hpl.jena.sparql.algebra.op.OpBGP;
@@ -58,6 +57,8 @@ import com.hp.hpl.jena.sparql.algebra.op.OpTriple;
 import com.hp.hpl.jena.sparql.algebra.op.OpUnion;
 import com.hp.hpl.jena.sparql.core.Var;
 import com.hp.hpl.jena.sparql.core.VarExprList;
+import com.hp.hpl.jena.sparql.engine.binding.Binding;
+import com.hp.hpl.jena.sparql.engine.main.StageGenerator;
 import com.hp.hpl.jena.sparql.expr.Expr;
 import com.hp.hpl.jena.sparql.expr.ExprAggregator;
 import com.hp.hpl.jena.sparql.expr.ExprWalker;
@@ -65,30 +66,17 @@ import com.hp.hpl.jena.sparql.expr.ExprWalker;
 public class SparqlOpVisitor implements OpVisitor {
 	
 	RdfTableMapping mapping = null;
-	List<Node> eliminated = new ArrayList<Node>();
-	List<Resource> traversed = new ArrayList<Resource>();
-	Set<SNode> blacklist = new HashSet<SNode>();
-	List<SelectedNode> tempSelectedNodes = new ArrayList<SelectedNode>();
-	List<SelectedNode> selectedNodes = new ArrayList<SelectedNode>();
+	List<List<Binding>> bgpBindings = new ArrayList<List<Binding>>();
 	Map<String,String> varMapping = new HashMap<String,String>();
 	Map<String,String> aliases = new HashMap<String,String>();
 	Set<String> tableList = new HashSet<String>();
 	List<String> previousSelects = new ArrayList<String>();
-	Set<String> traversedNodes = new HashSet<String>();
-	Set<Triple> traversedTriples = new HashSet<Triple>();
-//	Set<Node> selNode = new HashSet<Node>();
-//	Set<Node> finalSelNode = new HashSet<Node>();
-//	Map<Node,Node> selNodes = new HashMap<Node,Node>();
-//	Map<Node,Node> finalSelNodes = new HashMap<Node,Node>();
-//	Set<NodeObj> selNodes = new HashSet<NodeObj>();
-//	Set<NodeObj> finalSelNodes = new HashSet<NodeObj>();
-	List<List<SelectedNode>> allSelectedNodes = new ArrayList<List<SelectedNode>>();
 	List<String> filterList = new ArrayList<String>();
 	List<String> unionList = new ArrayList<String>();
+	List<Boolean> hasResults = new ArrayList<Boolean>();
 	
-//	String previousSelect = "";
+	
 	String selectClause = "SELECT ";
-//	String projections = "";
 	String fromClause = "FROM ";
 	String whereClause = "WHERE ";
 	String groupClause = "GROUP BY ";	
@@ -97,7 +85,9 @@ public class SparqlOpVisitor implements OpVisitor {
 	Boolean bgpStarted = false;
 	
 	public SparqlOpVisitor() {
-
+		StageGenerator origStageGen = (StageGenerator)ARQ.getContext().get(ARQ.stageGenerator) ;
+        StageGenerator stageGenAlt = new StageGeneratorAlt(origStageGen) ;
+        ARQ.getContext().set(ARQ.stageGenerator, stageGenAlt) ;
 	}
 	
 	public void useMapping(RdfTableMapping mapping) {
@@ -106,410 +96,100 @@ public class SparqlOpVisitor implements OpVisitor {
 
 	public void visit(OpBGP bgp) {
 		bgpStarted = true;
-		List<Triple> patterns = bgp.getPattern().getList();
-		for(Model model:mapping.getMapping()) {
-			
-//			for(Triple t:patterns) {
-//				System.out.println("triple:"+t);
-//				graphTraverse(t,model);
-//			}
-			for(Triple pattern:patterns) {
-//				System.out.println("parentt:"+pattern);
-				traversedNodes.clear();
-				if(!traversedTriples.contains(pattern))
-					graphTraverse(patterns,pattern,model);
-			}
-//			for(Entry<Node,Node> n:finalSelNodes.entrySet()) {
-//				System.out.println("final:"+n.getKey()+","+n.getValue());
-//			}
-			
-
-		}
-		//eliminate phase
-		Set<Triple> missingTriples = new HashSet<Triple>();
+		
+		List<Triple> patterns = bgp.getPattern().getList();	
+		Model model = mapping.getCombinedMapping();
+		String queryStr = "SELECT * WHERE {\n";
 		for(Triple pattern:patterns) {
-			Boolean isNotRepresented = true;
-			for(SelectedNode n:selectedNodes) {
-				if(n.getBinding().equals(pattern)) {
-					isNotRepresented = false;
-					break;
-				}
-			}
-			if(isNotRepresented)
-				missingTriples.add(pattern);
+			queryStr += "\t"+nodeToString(pattern.getSubject())+" "+nodeToString(pattern.getPredicate())+" "+nodeToString(pattern.getObject())+".\n"; 
 		}
-		Queue<Triple> search = new LinkedList<Triple>();
-		Set<Triple> removeList = new HashSet<Triple>();		
+		queryStr += "}";
 		
-		for(Triple t:missingTriples) {
-//			System.out.println("missing:"+t);
-			search.add(t);
-			removeList.add(t);
-		}
-			
-			
-		while(!search.isEmpty()) {
-			Triple t = search.poll();
-			for(Triple pattern:patterns) {
-				if(pattern.getSubject().equals(t.getObject()) || pattern.getObject().equals(t.getSubject()) || pattern.getSubject().equals(t.getSubject())) {
-//					System.out.println("remove:"+pattern);
-					if(!removeList.contains(pattern)) {
-//						System.out.println(pattern);
-						search.add(pattern);
-						removeList.add(pattern);
-					}
-				}
-			}
-		}
+//			System.out.println(queryStr);
 		
-		for(Triple t:removeList) {
-			for (Iterator<SelectedNode> iterator = selectedNodes.iterator(); iterator.hasNext();) {
-				SelectedNode n = iterator.next();
-			    if (n.getBinding().equals(t)) {
-			        iterator.remove();
-			    }
-			}
-		}
-		
-		for(SelectedNode n:selectedNodes) {
-//			System.out.println(n);
-			if(n.isLeafValue()) {
-				if(!n.isFixedValue()) {
-					String modifier = "";
-					if(!whereClause.trim().equals("WHERE")) {
-						modifier = " AND ";
-					}
-					whereClause += modifier + n.getWherePart();
-				}
-			} else if(n.isLeafMap()) {
-//				System.out.println(n.getVar() + ":" + n.getTable() + "." + n.getColumn());
-				if(n.isFixedValue()) {
-					varMapping.put(n.getVar(), n.getColumn());
-				} else {
-					if(!n.getVar().equals("")) {
-						varMapping.put(n.getVar(), n.getTable() + "." + n.getColumn());
-						tableList.add(n.getTable());
-					}
-				}
-			} else if(n.isObjectVar) {
-				varMapping.put(n.getVar(), "'" + n.getObjectUri() + "'");
-			}
-			if(n.isSubjectLeafMap()) {
-//				System.out.println(n.getSubjectVar() + ":" + n.getSubjectTable() + "." + n.getSubjectColumn());
-				if(!n.getSubjectVar().equals("")) {
-					varMapping.put(n.getSubjectVar(), n.getSubjectTable() + "." + n.getSubjectColumn());
-					tableList.add(n.getSubjectTable());
-				}
-			} else if(n.isSubjectVar) {
-				varMapping.put(n.getSubjectVar(), "'" + n.getSubjectUri() + "'");
-			}
-		}
+		Query query = QueryFactory.create(queryStr);
 
-		List<SelectedNode> nodesCopy = new ArrayList<SelectedNode>();
-		nodesCopy.addAll(selectedNodes);
-		selectedNodes.clear();
-		allSelectedNodes.add(nodesCopy);
+		QueryExecution qe = QueryExecutionFactory.create(query, model);
+		
+//		StageGenerator origStageGen = (StageGenerator)qe.getContext().get(ARQ.stageGenerator) ;
+//        StageGenerator stageGenAlt = new StageGeneratorAlt(origStageGen) ;
+//        qe.getContext().set(ARQ.stageGenerator, stageGenAlt) ;
+		
+		ResultSet results = qe.execSelect();
+		
+		hasResults.add(ProcessResults(results)); //check if there are results for the BGP
+
+//		ResultSetFormatter.out(System.out, results, query);
+//		while(results.hasNext()) {
+//			Binding b = results.nextBinding();
+//			System.out.println(b);
+//		}
+
+		qe.close();
 	}
 	
-	public void graphTraverse(List<Triple> patterns, Triple t, Model model) {
-		Node predicate = t.getPredicate();
-		Node object = t.getObject();
-		Node subject = t.getSubject(); 
-		Set<String> results = new HashSet<String>();
-//		List<SelectedNode> tempSel = new ArrayList<SelectedNode>();
-		for(Statement stmt:getStatements(subject,predicate,object,model)) {
-//			System.out.println("stmt:"+stmt+",t:"+t);
-
-			if(t.getSubject().isVariable() && t.getObject().isURI()) {
-				if(FormatUtil.compareUriPattern(t.getObject().getURI(), stmt.getObject().asResource().getURI())) {
-					SelectedNode node = new SelectedNode();
-					node.setStatement(stmt);
-					node.setBinding(t);
-					selectedNodes.add(node);
-				}
-			} 
-			Boolean subResult = graphTraverseR(patterns,t,model,stmt,"");
-			results.add(t.getPredicate()+"|"+t.getObject()+";"+subResult);
-			if(subResult) {
-				SelectedNode node = new SelectedNode();
-				node.setStatement(stmt);
-				node.setBinding(t);
-				selectedNodes.add(node);
-			}
-//			System.out.println(t.getPredicate()+"|"+t.getObject()+";"+subResult);
+	private Boolean ProcessResults(ResultSet results) {
+		Boolean hasResults = false;
+		List<Binding> bindingSet = new ArrayList<Binding>();
+		while(results.hasNext()) {
+			hasResults = true;
+			Binding b = results.nextBinding();
+			bindingSet.add(b);
+			AddVarMappings(b);
 		}
-		Boolean add = true;
-		for(String resultStr:results) {
-//			System.out.println("samplemain:"+resultStr);
-			String[] parts = resultStr.split(";");
-			if(parts.length>1) {
-				if(parts[1].equals("false")) {
-					if(!results.contains(parts[0]+";true")) {
-//						System.out.println("samplemain:ex");
-						add = false;
+		bgpBindings.add(bindingSet);
+		return hasResults;
+	}
+
+	private void AddVarMappings(Binding b) {
+		Iterator<Var> v = b.vars();
+		while(v.hasNext()) {
+			Var currentV = v.next();
+			Node val = b.get(currentV);
+			if(currentV.toString().contains("_info_")) {
+				String[] parts = val.getLiteralValue().toString().split("=");
+				if(parts.length>1) {
+					for(int i=0;i<parts.length;i++) {
+						String[] subParts = parts[i].split("\\.");
+						if(subParts.length>1) {
+							if(!Character.isDigit(subParts[1].charAt(0)))
+								tableList.add(subParts[0]);
+						}
 					}
 				}
+				if(!whereClause.trim().equals("WHERE"))
+					whereClause += " AND ";
+				whereClause += val.getLiteralValue().toString();
+			} else {
+				if(val.isLiteral()) {
+					String[] parts = val.getLiteralValue().toString().split("\\.");
+					if(parts.length>1) {
+						tableList.add(parts[0]);
+					}
+				}
+				varMapping.put(currentV.toString().replace("?", ""), FormatUtil.processNode(val));
 			}
 		}
-		
-		if(add) {
-//			System.out.println("add:"+tempSelectedNodes.size());
-//			for(SelectedNode sel:tempSelectedNodes) {
-//				System.out.println("add:"+sel);
-//			}
-//			finalSelNodes.addAll(selNodes);
-//			finalSelNodes.putAll(selNodes);
-			selectedNodes.addAll(tempSelectedNodes);
-			tempSelectedNodes.clear();
-//			finalSelNode.addAll(selNode);
+	}
+
+	private String nodeToString(Node node) {
+		if(node.isURI()) {
+			return "<"+node.toString()+">";
+		} else if(node.isLiteral()) {
+			String literal = "\""+node.getLiteralValue()+"\"";
+			if(node.getLiteralDatatypeURI()!=null) {
+				literal += "^^<"+node.getLiteralDatatypeURI()+">";
+			}
+			return literal;
 		} else {
-			tempSelectedNodes.clear();
+			String nodeStr = node.toString();
+			if(nodeStr.startsWith("??")) {
+				nodeStr = nodeStr.replace("??", "?bn");
+			}
+			return nodeStr;
 		}
 	}
 	
-	public Boolean graphTraverseR(List<Triple> patterns, Triple t, Model model, Statement stmt, String fmt) {
-		Set<String> results = new HashSet<String>();
-//		SelectedNode pnode = new SelectedNode();
-//		pnode.setStatement(stmt);
-//		pnode.setBinding(t);
-//		tempSelectedNodes.add(pnode);
-		for(Triple currentT:patterns) {
-			Node currentS = currentT.getSubject();
-			Node currentP = currentT.getPredicate();
-			Node currentO = currentT.getObject();
-			Node s = t.getSubject();
-			Node o = t.getObject();
-			Resource sO = stmt.getObject().isResource() ? stmt.getObject().asResource() : null;
-			if(o.equals(currentS)) {
-				if(sO!=null) {
-					RDFNode nodeO = null;
-					StmtIterator stmts = model.listStatements(sO, model.createProperty(currentP.getURI()), nodeO);
-					while(stmts.hasNext()) {
-						Statement sStmt = stmts.next();
-						if(currentO.isURI()) {
-							if(sStmt.getObject().isResource()) {
-								if(!sStmt.getObject().asResource().getURI().equals(currentO.getURI())) {
-//									System.out.println(fmt+"hitfalse:"+sStmt+" t:"+currentT);
-//									traversedTriples.add(currentT);
-									return false;
-								} else {
-									SelectedNode node = new SelectedNode();
-									node.setStatement(sStmt);
-									node.setBinding(currentT);
-									tempSelectedNodes.add(node);
-								}
-							}
-						} else if(currentO.isVariable()) {
-							String nodeStr = sStmt.getSubject().toString()+":"+currentP.toString()+":"+sStmt.getObject().toString();
-							if(!traversedNodes.contains(nodeStr)) {
-								traversedNodes.add(nodeStr);
-//								selNodes.add(new NodeObj(sStmt.getObject().asNode(),currentT.getObject()));
-//								selNodes.put(currentT.getObject(), sStmt.getObject().asNode());
-								SelectedNode node = new SelectedNode();
-								node.setStatement(sStmt);
-								node.setBinding(currentT);
-								tempSelectedNodes.add(node);
-								if(sStmt.getObject().isResource() || sStmt.getObject().isAnon()) {
-//									System.out.println(fmt+"s:"+sStmt+" t:"+currentT);
-									Boolean subResult = graphTraverseR(patterns,currentT,model,sStmt,fmt+"\t");
-									results.add(currentT.getPredicate()+"|"+currentT.getObject()+";"+subResult);
-//									if(subResult==false)
-//										System.out.println(fmt+"sfalse:"+currentT);
-								}
-								else if(sStmt.getObject().isLiteral()) {
-//									selNode.add(sStmt.getObject().asNode());
-//									System.out.println(fmt+"literal:"+sStmt.getObject()+" t:"+currentT.getObject());
-								}
-							}
-						} 
-						else if(currentO.isLiteral()) {
-							if(sStmt.getObject().isLiteral()) {
-								String lit1 = sStmt.getObject().asLiteral().toString();
-								String lit2 = currentO.getLiteralValue().toString();
-								if(!lit1.equals(lit2)) {
-//									System.out.println(fmt+"hitfalse_literal:"+sStmt.getObject().asLiteral()+","+currentO.getLiteralValue()+","+sStmt.getObject().asLiteral().equals(currentO.getLiteralValue()));
-//									traversedTriples.add(currentT);
-									return false;
-								} else {
-									SelectedNode node = new SelectedNode();
-									node.setStatement(sStmt);
-									node.setBinding(currentT);
-									tempSelectedNodes.add(node);
-								}
-							}
-						}
-					}
-//					traversedTriples.add(currentT);
-				}
-				
-			}
-			if(s.equals(currentS) && !o.equals(currentO)) {
-//			if(s.equals(currentS)) {
-				Resource sS = stmt.getSubject();
-				if(sS!=null) {
-					Resource nodeO = null;
-//					System.out.println("o:"+sO+":"+currentS);
-					StmtIterator stmts = model.listStatements(sS, model.createProperty(currentP.getURI()), nodeO);
-					while(stmts.hasNext()) {
-						Statement sStmt = stmts.next();
-//						System.out.println(sStmt);
-						if(currentO.isURI()) {
-							if(sStmt.getObject().isResource()) {
-								if(!sStmt.getObject().asResource().getURI().equals(currentO.getURI())) {
-//									System.out.println("hitfalse:"+sStmt+" t:"+currentT);
-//									traversedTriples.add(currentT);
-									return false;
-								}
-								else {
-									SelectedNode node = new SelectedNode();
-									node.setStatement(sStmt);
-									node.setBinding(currentT);
-									tempSelectedNodes.add(node);
-								}
-							}
-						} else if(currentO.isVariable()) {
-							String nodeStr = sStmt.getSubject().toString()+":"+currentP.toString()+":"+sStmt.getObject().toString();
-							if(!traversedNodes.contains(nodeStr)) {
-								traversedNodes.add(nodeStr);
-//								selNodes.add(new NodeObj(sStmt.getObject().asNode(),currentT.getObject()));
-//								selNodes.put(currentT.getObject(), sStmt.getObject().asNode());
-								SelectedNode node = new SelectedNode();
-								node.setStatement(sStmt);
-								node.setBinding(currentT);;
-								tempSelectedNodes.add(node);
-								if(sStmt.getObject().isResource() || sStmt.getObject().isAnon()) {
-//									System.out.println(fmt+"p:"+sStmt+" t:"+currentT);
-									Boolean subResult = graphTraverseR(patterns,currentT,model,sStmt,fmt+"\t");
-									results.add(currentT.getPredicate()+"|"+currentT.getObject()+";"+subResult);
-//									if(subResult==false)
-//										System.out.println(fmt+"pfalse:"+currentT);
-								} 
-								else if(sStmt.getObject().isLiteral()) {
-//									selNode.add(sStmt.getObject().asNode());
-//									System.out.println(fmt+"literala:"+sStmt.getObject()+" t:"+currentT);
-								}
-							}
-						}
-						else if(currentO.isLiteral()) {
-							if(sStmt.getObject().isLiteral()) {
-								String lit1 = sStmt.getObject().asLiteral().toString();
-								String lit2 = currentO.getLiteralValue().toString();
-								if(!lit1.equals(lit2)) {
-//									System.out.println(fmt+"hitfalse_literal:"+sStmt.getObject().asLiteral()+","+currentO.getLiteralValue()+","+sStmt.getObject().asLiteral().equals(currentO.getLiteralValue()));
-//									traversedTriples.add(currentT);
-									return false;
-								} else {
-									SelectedNode node = new SelectedNode();
-									node.setStatement(sStmt);
-									node.setBinding(currentT);
-									tempSelectedNodes.add(node);
-								}
-							}
-						}
-					}
-//					traversedTriples.add(currentT);
-				}
-			}
-			if(s.equals(currentO)) {
-				Resource sS = stmt.getSubject();
-				if(sS!=null) {
-					Resource nodeO = null;
-//					System.out.println("o:"+sO+":"+currentS);
-					StmtIterator stmts = model.listStatements(nodeO, model.createProperty(currentP.getURI()), sS);
-					while(stmts.hasNext()) {
-						Statement sStmt = stmts.next();
-						if(!stmt.getObject().equals(sStmt.getObject())) {
-							if(sStmt.getSubject().isResource() || sStmt.getSubject().isAnon()) {
-								String nodeStr = sStmt.getSubject().toString()+":"+currentP.toString()+":"+sStmt.getObject().toString();
-								if(!traversedNodes.contains(nodeStr)) {
-									SelectedNode node = new SelectedNode();
-									node.setStatement(sStmt);
-									node.setBinding(currentT);
-									tempSelectedNodes.add(node);
-									currentT = Triple.create(currentT.getObject(), currentT.getPredicate(), currentT.getSubject());
-									sStmt = model.createStatement(sStmt.getObject().asResource(), sStmt.getPredicate(), model.asRDFNode(sStmt.getSubject().asNode()));									
-									traversedNodes.add(nodeStr);
-//									System.out.println(fmt+"o:"+sStmt+" t:"+currentT);
-									Boolean subResult = graphTraverseR(patterns,currentT,model,sStmt,fmt+"\t");
-									results.add(currentT.getPredicate()+"|"+currentT.getObject()+";"+subResult);
-//									if(subResult==false)
-//										System.out.println(fmt+"ofalse:"+currentT);
-								}
-							}
-						}
-					}
-//					traversedTriples.add(currentT);
-				}
-			}
-		}
-		for(String resultStr:results) {
-//			System.out.println(fmt+"sample:"+resultStr+" parent:"+t);
-			String[] parts = resultStr.split(";");
-			if(parts.length>1) {
-				if(parts[1].equals("false")) {
-					if(!results.contains(parts[0]+";true")) {
-//						System.out.println("hitsthis");
-//						selNodes.clear();
-//						for(SelectedNode n:tempSelectedNodes) {
-//							if(n.getSubjectVar().equals("sensor"))
-//								System.out.println("cleared:"+n);
-//						}
-//						System.out.println("cleared_count:"+tempSelectedNodes.size());
-						tempSelectedNodes.clear();
-//						selNode.clear();
-						return false;
-					}
-				}
-			}
-		}
-//		System.out.println(fmt+"--");
-		return true;
-	}
-
-	private List<Statement> getStatements(Node subject, Node predicate, Node object, Model model) {
-		Resource s = subject.isBlank() ? model.asRDFNode(subject).asResource():null;
-		Property p = predicate.isVariable() ? null : model.createProperty(predicate.getURI());
-		RDFNode o = object.isBlank() ? model.asRDFNode(object) : null;
-
-		StmtIterator stmts = model.listStatements(s, p, o);
-		List<Statement> stmtList = new ArrayList<Statement>();
-		while(stmts.hasNext()) {
-			Boolean addStatement = true;
-			Statement stmt = stmts.next();
-//			System.out.println(subject);
-			if(!subject.isVariable()) {
-				if(!stmt.getSubject().isAnon()) {
-					String uri = stmt.getSubject().getURI();
-					if(uri.contains("{")) {
-						addStatement = FormatUtil.compareUriPattern(subject.getURI(),uri);
-					} else {
-						if(!uri.equals(subject.getURI()))
-							addStatement = false;
-					}
-				}
-			}
-			if(!object.isVariable()) {
-				RDFNode stmtObj = stmt.getObject();
-				if(object.isURI()) {
-					if(!stmtObj.isResource()) {
-						addStatement = false;
-					}
-					else if(!stmtObj.isAnon()) {
-						String uri = stmtObj.asResource().getURI();
-						if(uri.contains("{")) {
-							addStatement = FormatUtil.compareUriPattern(object.getURI(),uri);
-						} else {
-							if(!uri.equals(object.getURI()))
-								addStatement = false;
-						}
-					}
-				}
-			}
-			if(addStatement)
-				stmtList.add(stmt);
-		}
-		return stmtList;
-	}
 
 	public void visit(OpQuadPattern arg0) {
 		// TODO Auto-generated method stub
@@ -642,36 +322,33 @@ public class SparqlOpVisitor implements OpVisitor {
 	}
 
 	public void visit(OpLeftJoin arg0) {
-		if(allSelectedNodes.size()>1) {
-			for(SelectedNode right:allSelectedNodes.get(1)) {
-				for(SelectedNode left:allSelectedNodes.get(0)) {
-					if(left.getSubject().equals(right.getSubject())) {
-						if(right.isLeafValue()) {
-							String modifier = "";
-							if(!whereClause.trim().equals("WHERE")) {
-								modifier = " AND ";
+		if(hasResults.size()>1) {
+			for(Binding right:bgpBindings.get(1)) {
+				for(Binding left:bgpBindings.get(0)) {
+//					System.out.println(right +" "+ left);
+					Iterator<Var> rightV = right.vars();
+					Boolean discardRow = false;
+					while(rightV.hasNext()) {
+						Var v = rightV.next();
+						if(left.contains(v)) {
+							if(!left.get(v).equals(right.get(v))) {
+								discardRow = true;
+								break;
 							}
-							whereClause += modifier + right.getWherePart();
-						} else if(right.isLeafMap()) {
-			//				System.out.println(n.getVar() + ":" + n.getTable() + "." + n.getColumn());
-							varMapping.put(right.getVar(), right.getTable() + "." + right.getColumn());
-							tableList.add(right.getTable());
-						} else if(right.isObjectVar) {
-							varMapping.put(right.getVar(), "'" + right.getObjectUri() + "'");
 						}
-						break;
 					}
+					if(!discardRow)
+						AddVarMappings(right);
 				}
 			}
 		}
 	}
 
 	public void visit(OpUnion arg0) {
-		int index = allSelectedNodes.size()-1;
+		int index = hasResults.size()-1;
 		int whereIndex = filterList.size()-1;
 		if(unionList.isEmpty()) {
-			List<SelectedNode> sel = allSelectedNodes.get(index-1);
-			if(!sel.isEmpty()) {
+			if(hasResults.get(index-1)) {
 				String unionStr = "SELECT * FROM ";
 				for(String tables:tableList)
 					unionStr += tables + " ";
@@ -679,8 +356,7 @@ public class SparqlOpVisitor implements OpVisitor {
 				unionList.add(unionStr);
 			}
 		}
-		List<SelectedNode> sel = allSelectedNodes.get(index);
-		if(!sel.isEmpty()) {
+		if(hasResults.get(index)) {
 			String unionStr = "SELECT * FROM ";
 			for(String tables:tableList)
 				unionStr += tables + " ";
@@ -745,63 +421,49 @@ public class SparqlOpVisitor implements OpVisitor {
 		}
 		filterList.clear();
 		
-		if(tableList.size()>1) {
-//			System.out.println("joins required");
-			Map<String, Set<String>> joinMap = new HashMap<String,Set<String>>();
-			for(List<SelectedNode> selN:allSelectedNodes) {
-				for(SelectedNode node:selN) {
-//					System.out.println("woot");
-					if(node.isLeafMap()) {
-						String var = node.getVar();
-						Set<String> cols = joinMap.get(var);
-						if(cols==null) {
-							cols = new HashSet<String>();
-						}
-						cols.add(node.getTable()+"."+node.getColumn());
-						joinMap.put(var, cols);
-					}
-					if(node.isSubjectLeafMap()) {
-						String var = node.getSubjectVar();
-						Set<String> cols = joinMap.get(var);
-						if(cols==null) {
-							cols = new HashSet<String>();
-						}
-						cols.add(node.getSubjectTable()+"."+node.getSubjectColumn());
-						joinMap.put(var, cols);
-					}
-				}
-			}
-			
-			String joinExpression = "";
-			for(Entry<String,Set<String>> joinItem:joinMap.entrySet()) {
-				if(joinItem.getValue().size()>1) {
-					int count = 0;
-					for(String column:joinItem.getValue()) {
-						if(count++>0) {
-							joinExpression += "=";
-						}
-						joinExpression += column;
-					}
-				}
-			}
-			if(!whereClause.trim().equals("WHERE") && !joinExpression.trim().equals(""))
-				whereClause += " AND ";
-			whereClause += " " + joinExpression + " ";
-		}
-		allSelectedNodes.clear(); //clear the selected node list from any bgps below this projection
-		
-//		System.out.println("project");
-//		if(!previousSelect.equals("")) {//previous projection
-////			if(!whereClause.trim().equals("WHERE")) {
-////				whereClause += " AND ";
-////			}
-////			whereClause += projections + " IN (" + previousSelect + ") ";
-//			if(!fromClause.trim().equals("FROM")) {
-//				fromClause += " , ";
+//		if(tableList.size()>1) { 
+//			Map<String, Set<String>> joinMap = new HashMap<String,Set<String>>();
+//			for(List<SelectedNode> selN:allSelectedNodes) {
+//				for(SelectedNode node:selN) {
+//					if(node.isLeafMap()) {
+//						String var = node.getVar();
+//						Set<String> cols = joinMap.get(var);
+//						if(cols==null) {
+//							cols = new HashSet<String>();
+//						}
+//						cols.add(node.getTable()+"."+node.getColumn());
+//						joinMap.put(var, cols);
+//					}
+//					if(node.isSubjectLeafMap()) {
+//						String var = node.getSubjectVar();
+//						Set<String> cols = joinMap.get(var);
+//						if(cols==null) {
+//							cols = new HashSet<String>();
+//						}
+//						cols.add(node.getSubjectTable()+"."+node.getSubjectColumn());
+//						joinMap.put(var, cols);
+//					}
+//				}
 //			}
-//			fromClause += " (" + previousSelect + ") ";
+//			
+//			String joinExpression = "";
+//			for(Entry<String,Set<String>> joinItem:joinMap.entrySet()) {
+//				if(joinItem.getValue().size()>1) {
+//					int count = 0;
+//					for(String column:joinItem.getValue()) {
+//						if(count++>0) {
+//							joinExpression += "=";
+//						}
+//						joinExpression += column;
+//					}
+//				}
+//			}
+//			if(!whereClause.trim().equals("WHERE") && !joinExpression.trim().equals(""))
+//				whereClause += " AND ";
+//			whereClause += " " + joinExpression + " ";
 //		}
-		
+//		allSelectedNodes.clear(); //clear the selected node list from any bgps below this projection
+			
 		int count=0;
 		for(Var var:arg0.getVars()) {
 			if(count++>0) {

@@ -1,7 +1,11 @@
 package uk.ac.soton.ldanalytics.sparql2sql.util;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import com.hp.hpl.jena.graph.Node;
 import com.hp.hpl.jena.sparql.expr.Expr;
@@ -77,8 +81,9 @@ public class FormatUtil {
 
 	public static String mapVar(String varName, Map<String, String> varMapping) {
 		String mappedName = varName;
-		if(varMapping.containsKey(varName))
+		if(varMapping.containsKey(varName)) {
 			mappedName = varMapping.get(varName);
+		}
 		return mappedName;
 	}
 
@@ -90,6 +95,15 @@ public class FormatUtil {
 				return false;
 		}
 		return true;
+	}
+	
+	public static List<String> extractCols(String uri) {
+		List<String> cols = new ArrayList<String>();
+		Matcher m = Pattern.compile("\\{(.*?)\\}").matcher(uri);
+		while(m.find()) {
+			cols.add(m.group(1));				
+		}
+		return cols;
 	}
 
 	public static String handleExpr(Expr expr, Map<String, String> varMapping) {
@@ -103,6 +117,29 @@ public class FormatUtil {
 
 	public static String processLiteral(Node object) {
 		return object.getLiteral().getValue().toString();
+	}
+	
+	public static String processNode(Node n) {
+		if(n.isLiteral()) {
+			return processLiteral(n);
+		} else if(n.isURI()) {
+			String uri = n.getURI();
+			if(uri.contains("{")) {
+				String[] parts = uri.split("\\{");
+				uri = "CONCAT(";
+				for(int i=0;i<parts.length-1;i++) {
+					uri += "'"+parts[i]+"'";
+					String[] subParts = parts[i+1].split("}");
+					uri += "," + subParts[0];
+				}
+				uri+=")";
+			} else {
+				uri = "'" + uri + "'";
+			}
+			return uri;
+		} else {
+			return n.toString();
+		}
 	}
 
 	public static boolean isAggVar(Expr expr) {

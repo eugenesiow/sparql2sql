@@ -241,7 +241,7 @@ public class SQLFormatter {
 			}
 		}
 
-		@SuppressWarnings({"UnnecessaryBoxing"})
+//		@SuppressWarnings({"UnnecessaryBoxing"})
 		private void select() {
 			out();
 			indent++;
@@ -299,7 +299,7 @@ public class SQLFormatter {
 			afterValues = true;
 		}
 
-		@SuppressWarnings({"UnnecessaryUnboxing"})
+//		@SuppressWarnings({"UnnecessaryUnboxing"})
 		private void closeParen() {
 			parensSinceSelect--;
 			if (parensSinceSelect < 0) {
