@@ -6,9 +6,8 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
-
-import uk.ac.soton.ldanalytics.sparql2sql.util.FormatUtil;
 
 import org.apache.jena.graph.Node;
 import org.apache.jena.graph.Triple;
@@ -18,7 +17,6 @@ import org.apache.jena.query.QueryExecution;
 import org.apache.jena.query.QueryExecutionFactory;
 import org.apache.jena.query.QueryFactory;
 import org.apache.jena.query.ResultSet;
-import org.apache.jena.query.ResultSetFormatter;
 import org.apache.jena.rdf.model.Model;
 import org.apache.jena.sparql.algebra.OpVisitor;
 import org.apache.jena.sparql.algebra.op.OpAssign;
@@ -63,6 +61,8 @@ import org.apache.jena.sparql.expr.Expr;
 import org.apache.jena.sparql.expr.ExprAggregator;
 import org.apache.jena.sparql.expr.ExprWalker;
 
+import uk.ac.soton.ldanalytics.sparql2sql.util.FormatUtil;
+
 public class SparqlOpVisitor implements OpVisitor {
 	
 	RdfTableMapping mapping = null;
@@ -74,7 +74,8 @@ public class SparqlOpVisitor implements OpVisitor {
 	List<String> filterList = new ArrayList<String>();
 	List<String> unionList = new ArrayList<String>();
 	List<Boolean> hasResults = new ArrayList<Boolean>();
-	
+	Map<String,String> uriToSyntax = new HashMap<String,String>();	
+	Map<String,String> tableToSyntax = new HashMap<String,String>();
 	
 	String selectClause = "SELECT ";
 	String fromClause = "FROM ";
@@ -496,7 +497,11 @@ public class SparqlOpVisitor implements OpVisitor {
 			if(count++>0) {
 				fromClause += " , ";
 			}
-			fromClause += table;
+			if(tableToSyntax.containsKey(table)) {
+				fromClause += table + tableToSyntax.get(table);
+			} else {
+				fromClause += table;
+			}
 		}
 		tableList.clear();
 		
@@ -620,6 +625,33 @@ public class SparqlOpVisitor implements OpVisitor {
 			return previousSelects.get(0);
 		}
 		return null;
+	}
+
+	public void setNamedGraphs(List<String> namedGraphURIs) {
+		for(String graphUri:namedGraphURIs) {
+			String[] parts = graphUri.split(";");
+			if(parts.length>2) {
+				String additional = ".win:";
+				if(parts.length<4)
+					additional += "time_batch(";
+				else
+					additional += "time(";
+				additional += parts[1] + " " + FormatUtil.timePeriod(parts[2]);
+				additional+= ")";
+				uriToSyntax.put(parts[0], additional);
+			}
+		}
+	}
+
+	public void setStreamCatalog(Map<String, String> streamCatalog) {
+		for(Entry<String,String> stream:streamCatalog.entrySet()) {
+			if(uriToSyntax.containsKey(stream.getValue())) {
+				tableToSyntax.put(stream.getKey(), uriToSyntax.get(stream.getValue()));
+			} else {
+				tableToSyntax.put(stream.getKey(), stream.getKey());
+			}
+		}
+		
 	}
 
 }

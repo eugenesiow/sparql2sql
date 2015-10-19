@@ -1,5 +1,8 @@
 package uk.ac.soton.ldanalytics.sparql2sql.util;
 
+import java.io.BufferedReader;
+import java.io.FileReader;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -144,6 +147,48 @@ public class FormatUtil {
 
 	public static boolean isAggVar(Expr expr) {
 		return expr.getVarName().startsWith(".");
+	}
+
+	public static String timePeriod(String timeShort) {
+		String timeLong = "";
+		switch(timeShort) {
+		case "ms":
+			timeLong = "msec";
+			break;
+		case "s":
+			timeLong = "sec";
+			break;
+		case "m":
+			timeLong = "min";
+			break;
+		case "h":
+			timeLong = "hour";
+			break;
+		case "d":
+			timeLong = "day";
+			break;
+		}
+		return timeLong;
+	}
+
+	public static Map<String, String> loadStreamCatalog(String path) {
+		Map<String,String> catalog = new HashMap<String,String>();
+		
+		try {
+			BufferedReader br = new BufferedReader(new FileReader(path));
+			String line="";
+			while((line=br.readLine())!=null) {
+				String[] parts = line.split(",");
+				if(parts.length>1) {
+					catalog.put(parts[0],parts[1]);
+				}
+			}
+			br.close();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		
+		return catalog;
 	}
 	
 	
