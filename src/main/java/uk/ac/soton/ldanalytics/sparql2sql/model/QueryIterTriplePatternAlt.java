@@ -167,6 +167,7 @@ public class QueryIterTriplePatternAlt extends QueryIterRepeatApply
 //        		}
 //        	}
         	if(inputNode.isLiteral()) {
+//    			System.out.println(inputNode + " " + outputNode);
         		String outVal = outputNode.getLiteralValue().toString();
         		String[] outParts = outVal.split("\\.");
         		if(outParts.length>1) {
@@ -176,8 +177,11 @@ public class QueryIterTriplePatternAlt extends QueryIterRepeatApply
         			}
         		}
         		if(inputNode.getLiteralDatatype()!=null && outputNode.getLiteralDatatype()!=null) {
-	        		if(!inputNode.getLiteralDatatype().equals(outputNode.getLiteralDatatype()))
-	        			return false;
+	        		if(!inputNode.getLiteralDatatype().equals(outputNode.getLiteralDatatype())) {
+	        			if(!inputNode.getLiteralValue().toString().equals(outputNode.getLiteralValue().toString())) {
+	        				return false;
+	        			}
+	        		}
         		}
         		if(!inputNode.getLiteralValue().toString().equals(outputNode.getLiteralValue().toString()))
         			return false;
