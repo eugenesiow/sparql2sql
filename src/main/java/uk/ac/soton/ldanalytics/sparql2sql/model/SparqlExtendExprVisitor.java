@@ -4,17 +4,17 @@ import java.util.Map;
 
 import uk.ac.soton.ldanalytics.sparql2sql.util.FormatUtil;
 
-import org.apache.jena.sparql.expr.Expr;
-import org.apache.jena.sparql.expr.ExprAggregator;
-import org.apache.jena.sparql.expr.ExprFunction0;
-import org.apache.jena.sparql.expr.ExprFunction1;
-import org.apache.jena.sparql.expr.ExprFunction2;
-import org.apache.jena.sparql.expr.ExprFunction3;
-import org.apache.jena.sparql.expr.ExprFunctionN;
-import org.apache.jena.sparql.expr.ExprFunctionOp;
-import org.apache.jena.sparql.expr.ExprVar;
-import org.apache.jena.sparql.expr.ExprVisitor;
-import org.apache.jena.sparql.expr.NodeValue;
+import com.hp.hpl.jena.sparql.expr.Expr;
+import com.hp.hpl.jena.sparql.expr.ExprAggregator;
+import com.hp.hpl.jena.sparql.expr.ExprFunction0;
+import com.hp.hpl.jena.sparql.expr.ExprFunction1;
+import com.hp.hpl.jena.sparql.expr.ExprFunction2;
+import com.hp.hpl.jena.sparql.expr.ExprFunction3;
+import com.hp.hpl.jena.sparql.expr.ExprFunctionN;
+import com.hp.hpl.jena.sparql.expr.ExprFunctionOp;
+import com.hp.hpl.jena.sparql.expr.ExprVar;
+import com.hp.hpl.jena.sparql.expr.ExprVisitor;
+import com.hp.hpl.jena.sparql.expr.NodeValue;
 
 public class SparqlExtendExprVisitor implements ExprVisitor {
 	
