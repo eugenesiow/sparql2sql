@@ -1,14 +1,13 @@
 package uk.ac.soton.ldanalytics.sparql2sql.model;
 
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStream;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-
-import uk.ac.soton.ldanalytics.sparql2sql.util.FormatUtil;
 
 import org.apache.jena.graph.Node;
 import org.apache.jena.rdf.model.Model;
@@ -16,6 +15,9 @@ import org.apache.jena.rdf.model.ModelFactory;
 import org.apache.jena.rdf.model.RDFNode;
 import org.apache.jena.rdf.model.Statement;
 import org.apache.jena.rdf.model.StmtIterator;
+
+import uk.ac.soton.ldanalytics.sparql2sql.riot.RDFReaderMap;
+import uk.ac.soton.ldanalytics.sparql2sql.util.FormatUtil;
 
 public class RdfTableMapping {
 	Model mapping = null;
@@ -27,7 +29,15 @@ public class RdfTableMapping {
 	
 	public void loadMapping(String filename) {
 		Model map = ModelFactory.createDefaultModel();
-		map.read(filename);
+		RDFReaderMap rd = new RDFReaderMap("N-Triples");
+		try {
+		InputStream in = new FileInputStream(filename);
+		rd.read(map, in,"");
+		in.close();
+		} catch(IOException e) {
+			e.printStackTrace();
+		}
+//		map.read(filename);
 		mapping.add(JoinMap(map));
 	}
 	
