@@ -54,7 +54,6 @@ public class SparqlExtendExprVisitor implements ExprVisitor {
 				expression += "\n";
 			}
 			expression += elsePart;
-			varMapping.put(arg0.toString(), expression);
 			isIf=true;
 		}
 	}

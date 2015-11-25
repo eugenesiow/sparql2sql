@@ -83,6 +83,7 @@ public class SparqlOpVisitor implements OpVisitor {
 	String groupClause = "GROUP BY ";	
 	String havingClause = "HAVING ";
 	
+	String dialect = "H2";
 	Boolean bgpStarted = false;
 	
 	public SparqlOpVisitor() {
@@ -168,7 +169,7 @@ public class SparqlOpVisitor implements OpVisitor {
 						tableList.add(parts[0]);
 					}
 				}
-				varMapping.put(currentV.toString().replace("?", ""), FormatUtil.processNode(val));
+				varMapping.put(currentV.toString().replace("?", ""), FormatUtil.processNode(val,dialect));
 			}
 		}
 	}
@@ -311,7 +312,13 @@ public class SparqlOpVisitor implements OpVisitor {
 				aliases.put(var.getName(), val);
 			} 
 			if(varMapping.containsKey(originalKey)) {
-				String val = varMapping.remove(originalKey);
+				// do not remove but just get for the case where there is extend and filter: e.g.
+				//				(project (?roomName ?totalMotion)
+				//						  (filter (> ?.0 0)
+				//						    (extend ((?totalMotion ?.0))
+				//						      (extend ((?roomName ?sensor))
+				//						        (group (?sensor) ((?.0 (sum ?motionOrNoMotion)))
+				String val = varMapping.get(originalKey); 
 				varMapping.put(var.getName(), val);
 			}
 		}
@@ -629,6 +636,7 @@ public class SparqlOpVisitor implements OpVisitor {
 
 	public void setNamedGraphs(List<String> namedGraphURIs) {
 		for(String graphUri:namedGraphURIs) {
+			dialect = "ESPER";
 			String[] parts = graphUri.split(";");
 			if(parts.length>2) {
 				String additional = ".win:";

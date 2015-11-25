@@ -122,20 +122,37 @@ public class FormatUtil {
 		return object.getLiteral().getValue().toString();
 	}
 	
-	public static String processNode(Node n) {
+	public static String processNode(Node n,String dialect) {
+		String concatHead;
+		String concatSeperator;
+		String concatTail;
+		
+		switch(dialect) {
+			case "ESPER":
+				concatHead = "(";
+				concatSeperator = "||";
+				concatTail = ")";
+				break;
+			default: 
+				concatHead = "CONCAT{";
+				concatSeperator = ",";
+				concatTail = ")";
+				break;
+		}
+		
 		if(n.isLiteral()) {
 			return processLiteral(n);
 		} else if(n.isURI()) {
 			String uri = n.getURI();
 			if(uri.contains("{")) {
 				String[] parts = uri.split("\\{");
-				uri = "CONCAT(";
+				uri = concatHead;
 				for(int i=0;i<parts.length-1;i++) {
 					uri += "'"+parts[i]+"'";
 					String[] subParts = parts[i+1].split("}");
-					uri += "," + subParts[0];
+					uri += concatSeperator + subParts[0];
 				}
-				uri+=")";
+				uri+=concatTail;
 			} else {
 				uri = "'" + uri + "'";
 			}
