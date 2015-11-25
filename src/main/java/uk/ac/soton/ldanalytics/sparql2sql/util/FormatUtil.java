@@ -197,7 +197,7 @@ public class FormatUtil {
 			while((line=br.readLine())!=null) {
 				String[] parts = line.split(",");
 				if(parts.length>1) {
-					catalog.put(parts[0],parts[1]);
+					catalog.put(parts[0].trim(),parts[1].trim());
 				}
 			}
 			br.close();
