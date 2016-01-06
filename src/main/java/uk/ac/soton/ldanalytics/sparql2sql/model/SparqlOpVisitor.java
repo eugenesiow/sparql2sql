@@ -9,6 +9,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
+import org.apache.commons.lang3.math.NumberUtils;
 import org.apache.jena.graph.Node;
 import org.apache.jena.graph.Triple;
 import org.apache.jena.query.ARQ;
@@ -164,9 +165,11 @@ public class SparqlOpVisitor implements OpVisitor {
 				whereClause += val.getLiteralValue().toString();
 			} else {
 				if(val.isLiteral()) {
-					String[] parts = val.getLiteralValue().toString().split("\\.");
+					String value = val.getLiteralValue().toString();
+					String[] parts = value.split("\\.");
 					if(parts.length>1) {
-						tableList.add(parts[0]);
+						if(!Character.isDigit(parts[1].charAt(0)))
+							tableList.add(parts[0]);
 					}
 				}
 				varMapping.put(currentV.toString().replace("?", ""), FormatUtil.processNode(val,dialect));

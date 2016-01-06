@@ -119,7 +119,8 @@ public class FormatUtil {
 	}
 
 	public static String processLiteral(Node object) {
-		return object.getLiteral().getValue().toString();
+		
+		return "'" + object.getLiteral().getValue().toString() + "'";
 	}
 	
 	public static String processNode(Node n,String dialect) {
