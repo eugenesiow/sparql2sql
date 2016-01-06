@@ -119,8 +119,17 @@ public class FormatUtil {
 	}
 
 	public static String processLiteral(Node object) {
+		String litVal = object.getLiteral().getValue().toString();
 		
-		return "'" + object.getLiteral().getValue().toString() + "'";
+		//put brackets around literal values if they are not mappings
+		String[] parts = litVal.split("\\.");
+		if(parts.length>1) {
+			if(Character.isDigit(parts[1].charAt(0)))
+				litVal = "'" + litVal + "'";
+		} else {
+			litVal = "'" + litVal + "'";
+		}
+		return litVal;
 	}
 	
 	public static String processNode(Node n,String dialect) {
