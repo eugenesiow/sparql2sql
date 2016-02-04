@@ -6,7 +6,11 @@ To run SRBench on sparql2sql, follow the procedure using the LSD-ETL tool to tra
 
 ### SRBench
 
-The translated queries using the engine can be found on https://github.com/eugenesiow/sparql2sql/wiki and https://github.com/eugenesiow/ldanalytics-PiSmartHome/wiki.
+The translated queries using the engine can be found on https://github.com/eugenesiow/sparql2sql/wiki 
+
+### Smart Home Benchmark
+
+The translated queries using the engine can be found on https://github.com/eugenesiow/ldanalytics-PiSmartHome/wiki.
 
 ### Other Projects
 * [LSD-ETL](https://github.com/eugenesiow/lsd-ETL)
