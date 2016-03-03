@@ -9,16 +9,9 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
-import org.apache.commons.lang3.math.NumberUtils;
 import org.apache.jena.graph.Node;
 import org.apache.jena.graph.Triple;
 import org.apache.jena.query.ARQ;
-import org.apache.jena.query.Query;
-import org.apache.jena.query.QueryExecution;
-import org.apache.jena.query.QueryExecutionFactory;
-import org.apache.jena.query.QueryFactory;
-import org.apache.jena.query.ResultSet;
-import org.apache.jena.rdf.model.Model;
 import org.apache.jena.sparql.algebra.OpVisitor;
 import org.apache.jena.sparql.algebra.op.OpAssign;
 import org.apache.jena.sparql.algebra.op.OpBGP;
@@ -101,7 +94,7 @@ public class SparqlOpVisitor implements OpVisitor {
 		bgpStarted = true;
 		
 		List<Triple> patterns = bgp.getPattern().getList();	
-		Model model = mapping.getCombinedMapping();
+		
 		String queryStr = "SELECT * WHERE {\n";
 		for(Triple pattern:patterns) {
 			queryStr += "\t"+nodeToString(pattern.getSubject())+" "+nodeToString(pattern.getPredicate())+" "+nodeToString(pattern.getObject())+".\n"; 
@@ -110,71 +103,64 @@ public class SparqlOpVisitor implements OpVisitor {
 		
 //			System.out.println(queryStr);
 		
-		Query query = QueryFactory.create(queryStr);
-
-		QueryExecution qe = QueryExecutionFactory.create(query, model);
-		
+				
 //		StageGenerator origStageGen = (StageGenerator)qe.getContext().get(ARQ.stageGenerator) ;
 //        StageGenerator stageGenAlt = new StageGeneratorAlt(origStageGen) ;
 //        qe.getContext().set(ARQ.stageGenerator, stageGenAlt) ;
 		
-		ResultSet results = qe.execSelect();
-		
-		hasResults.add(ProcessResults(results)); //check if there are results for the BGP
+		hasResults.add(ProcessResults(mapping.executeQuery(queryStr,dialect))); //check if there are results for the BGP
 
 //		ResultSetFormatter.out(System.out, results, query);
 //		while(results.hasNext()) {
 //			Binding b = results.nextBinding();
 //			System.out.println(b);
 //		}
-
-		qe.close();
 	}
 	
 	private Boolean ProcessResults(ResultSet results) {
 		Boolean hasResults = false;
-		List<Binding> bindingSet = new ArrayList<Binding>();
-		while(results.hasNext()) {
+		List<Result> bindingSet = new ArrayList<Result>();
+		for(Result result:results.getResults()) {
 			hasResults = true;
-			Binding b = results.nextBinding();
-			bindingSet.add(b);
-			AddVarMappings(b);
+			bindingSet.add(result);
+			AddVarMappings(result);
 		}
-		bgpBindings.add(bindingSet);
+//		bgpBindings.add(bindingSet);
 		return hasResults;
 	}
 
-	private void AddVarMappings(Binding b) {
-		Iterator<Var> v = b.vars();
-		while(v.hasNext()) {
-			Var currentV = v.next();
-			Node val = b.get(currentV);
-			if(currentV.toString().contains("_info_")) {
-				String[] parts = val.getLiteralValue().toString().split("=");
-				if(parts.length>1) {
-					for(int i=0;i<parts.length;i++) {
-						String[] subParts = parts[i].split("\\.");
-						if(subParts.length>1) {
-							if(!Character.isDigit(subParts[1].charAt(0)))
-								tableList.add(subParts[0]);
-						}
-					}
-				}
-				if(!whereClause.trim().equals("WHERE"))
-					whereClause += " AND ";
-				whereClause += val.getLiteralValue().toString();
-			} else {
-				if(val.isLiteral()) {
-					String value = val.getLiteralValue().toString();
-					String[] parts = value.split("\\.");
-					if(parts.length>1) {
-						if(!Character.isDigit(parts[1].charAt(0)))
-							tableList.add(parts[0]);
-					}
-				}
-				varMapping.put(currentV.toString().replace("?", ""), FormatUtil.processNode(val,dialect));
-			}
-		}
+	private void AddVarMappings(Result rs) {
+		varMapping.putAll(rs.getVarMapping());
+//		Iterator<Var> v = b.vars();
+//		while(v.hasNext()) {
+//			Var currentV = v.next();
+//			Node val = b.get(currentV);
+//			if(currentV.toString().contains("_info_")) {
+//				String[] parts = val.getLiteralValue().toString().split("=");
+//				if(parts.length>1) {
+//					for(int i=0;i<parts.length;i++) {
+//						String[] subParts = parts[i].split("\\.");
+//						if(subParts.length>1) {
+//							if(!Character.isDigit(subParts[1].charAt(0)))
+//								tableList.add(subParts[0]);
+//						}
+//					}
+//				}
+//				if(!whereClause.trim().equals("WHERE"))
+//					whereClause += " AND ";
+//				whereClause += val.getLiteralValue().toString();
+//			} else {
+//				if(val.isLiteral()) {
+//					String value = val.getLiteralValue().toString();
+//					String[] parts = value.split("\\.");
+//					if(parts.length>1) {
+//						if(!Character.isDigit(parts[1].charAt(0)))
+//							tableList.add(parts[0]);
+//					}
+//				}
+//				varMapping.put(currentV.toString().replace("?", ""), FormatUtil.processNode(val,dialect));
+//			}
+//		}
 	}
 
 	private String nodeToString(Node node) {
@@ -333,6 +319,7 @@ public class SparqlOpVisitor implements OpVisitor {
 	}
 
 	public void visit(OpLeftJoin arg0) {
+		/*
 		if(hasResults.size()>1) {
 			for(Binding right:bgpBindings.get(1)) {
 				for(Binding left:bgpBindings.get(0)) {
@@ -352,7 +339,7 @@ public class SparqlOpVisitor implements OpVisitor {
 						AddVarMappings(right);
 				}
 			}
-		}
+		}*/
 	}
 
 	public void visit(OpUnion arg0) {
