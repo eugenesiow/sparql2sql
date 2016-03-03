@@ -118,27 +118,25 @@ public class RdfTableMappingJena implements RdfTableMapping {
 				Var currentV = v.next();
 				Node val = b.get(currentV);
 				if(currentV.toString().contains("_info_")) {
-//					String[] parts = val.getLiteralValue().toString().split("=");
-//					if(parts.length>1) {
-//						for(int i=0;i<parts.length;i++) {
-//							String[] subParts = parts[i].split("\\.");
-//							if(subParts.length>1) {
-//								if(!Character.isDigit(subParts[1].charAt(0)))
-//									tableList.add(subParts[0]);
-//							}
-//						}
-//					}
-//					if(!whereClause.trim().equals("WHERE"))
-//						whereClause += " AND ";
-//					whereClause += val.getLiteralValue().toString();
+					String[] parts = val.getLiteralValue().toString().split("=");
+					if(parts.length>1) {
+						for(int i=0;i<parts.length;i++) {
+							String[] subParts = parts[i].split("\\.");
+							if(subParts.length>1) {
+								if(!Character.isDigit(subParts[1].charAt(0)))
+									result.addTable(subParts[0]);
+							}
+						}
+					}
+					result.addWhere(val.getLiteralValue().toString());
 				} else {
 					if(val.isLiteral()) {
-//						String value = val.getLiteralValue().toString();
-//						String[] parts = value.split("\\.");
-//						if(parts.length>1) {
-//							if(!Character.isDigit(parts[1].charAt(0)))
-//								tableList.add(parts[0]);
-//						}
+						String value = val.getLiteralValue().toString();
+						String[] parts = value.split("\\.");
+						if(parts.length>1) {
+							if(!Character.isDigit(parts[1].charAt(0)))
+								result.addTable(parts[0]);
+						}
 					}
 					result.addVarMapping(currentV.toString().replace("?", ""),FormatUtil.processNode(val,dialect));
 				}
