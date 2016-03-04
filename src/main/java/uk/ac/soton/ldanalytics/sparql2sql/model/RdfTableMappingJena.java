@@ -23,35 +23,18 @@ import org.apache.jena.rdf.model.StmtIterator;
 import org.apache.jena.sparql.core.Var;
 import org.apache.jena.sparql.engine.binding.Binding;
 import org.openrdf.repository.Repository;
-import org.openrdf.repository.sail.SailRepository;
-import org.openrdf.sail.memory.MemoryStore;
 
 import uk.ac.soton.ldanalytics.sparql2sql.riot.RDFReaderMap;
 import uk.ac.soton.ldanalytics.sparql2sql.util.FormatUtil;
 
 public class RdfTableMappingJena implements RdfTableMapping {
 	Model mapping = null;
-	Repository repo = null;
 	Map<String,Set<String>> joinData = new HashMap<String,Set<String>>();
-	BGPEngine engine = BGPEngine.JENA;
 	Boolean hasResults = false;
 	String dialect = "H2";
 	
 	public RdfTableMappingJena() {
 		mapping = ModelFactory.createDefaultModel();
-	}
-	
-	public RdfTableMappingJena(BGPEngine engine) {
-		this.engine = engine;
-		switch(engine) {
-			case JENA:
-				mapping = ModelFactory.createDefaultModel(); 
-				break;
-			case SESAME:
-				repo = new SailRepository(new MemoryStore());
-				repo.initialize();
-				break;
-		}
 	}
 	
 	public void loadMapping(String filename) {

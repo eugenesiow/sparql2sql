@@ -1,95 +1,105 @@
-//package uk.ac.soton.ldanalytics.sparql2sql.model;
+package uk.ac.soton.ldanalytics.sparql2sql.model;
+
+import java.io.File;
+import java.io.IOException;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
+import org.openrdf.OpenRDFException;
+import org.openrdf.model.IRI;
+import org.openrdf.model.Resource;
+import org.openrdf.model.Statement;
+import org.openrdf.model.Value;
+import org.openrdf.repository.Repository;
+import org.openrdf.repository.RepositoryConnection;
+import org.openrdf.repository.RepositoryResult;
+import org.openrdf.repository.sail.SailRepository;
+import org.openrdf.rio.RDFFormat;
+import org.openrdf.sail.memory.MemoryStore;
+
+import uk.ac.soton.ldanalytics.sparql2sql.util.FormatUtil;
+
+public class RdfTableMappingSesame implements RdfTableMapping {
+	Repository mapping = null;
+	Map<String,Set<String>> joinData = new HashMap<String,Set<String>>();
+	Boolean hasResults = false;
+	String dialect = "H2";
+	
+	public RdfTableMappingSesame() {
+		mapping = new SailRepository(new MemoryStore());
+		mapping.initialize();
+	}
+	
+	public void loadMapping(String filename) {
+		Repository repo = new SailRepository(new MemoryStore());
+		repo.initialize();
+		
+		File file = new File(filename);
+		try (RepositoryConnection con = repo.getConnection()) {
+		   con.add(file, null, RDFFormat.RDFXML);
+		   try (RepositoryConnection mapCon = mapping.getConnection()) {
+			   try (RepositoryResult<Statement> statements = con.getStatements(null, null, null, false)) {
+				   while (statements.hasNext()) {
+				      Statement s = statements.next();
+				      if(s.getSubject() instanceof IRI || s.getObject() instanceof IRI) {
+				    	  mapCon.add((Resource)checkUri(s.getSubject()), s.getPredicate(), checkUri(s.getObject()));
+				      }
+				   }
+			   }
+		   } catch (OpenRDFException e1) {
+			   e1.printStackTrace();
+		   }
+		}
+		catch (OpenRDFException e) {
+		   e.printStackTrace();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+
+	}
+	
+	private Value checkUri(Value node) {
+		if(node instanceof IRI) {
+			String uri = node.stringValue();
+			if(uri.contains("{")) {
+				List<String> colList = FormatUtil.extractCols(uri);
+				uri = uri.replaceAll("\\{.*?}", "\\{\\}");
+				Set<String> existing = joinData.get(uri);
+				if(existing==null) {
+					existing = new HashSet<String>();
+				}
+				existing.addAll(colList);
+				joinData.put(uri, existing);
+			}
+		}
+		return node;
+	}
+
+	public ResultSet executeQuery(String queryStr, String dialect) {
+		ResultSet rs = new ResultSet();
+//		try (RepositoryConnection conn = repo.getConnection()) {
+//			   String queryString = "SELECT ?x ?y WHERE { ?x ?p ?y } ";
+//			   TupleQuery tupleQuery = con.prepareTupleQuery(QueryLanguage.SPARQL, queryString);
 //
-//import java.io.FileInputStream;
-//import java.io.IOException;
-//import java.io.InputStream;
-//import java.util.HashMap;
-//import java.util.HashSet;
-//import java.util.List;
-//import java.util.Map;
-//import java.util.Set;
+//			   TupleQueryResult result = tupleQuery.evaluate(); 
+//			   try (TupleQueryResult result = tupleQuery.evaluate()) {
+//			      while (result.hasNext()) {  // iterate over the result
+//				 BindingSet bindingSet = result.next();
+//				 Value valueOfX = bindingSet.getValue("x");
+//				 Value valueOfY = bindingSet.getValue("y");
 //
-//import org.apache.jena.graph.Node;
-//import org.apache.jena.rdf.model.Model;
-//import org.apache.jena.rdf.model.ModelFactory;
-//import org.apache.jena.rdf.model.RDFNode;
-//import org.apache.jena.rdf.model.Statement;
-//import org.apache.jena.rdf.model.StmtIterator;
-//import org.openrdf.repository.Repository;
-//import org.openrdf.repository.sail.SailRepository;
-//import org.openrdf.sail.memory.MemoryStore;
-//
-//import uk.ac.soton.ldanalytics.sparql2sql.riot.RDFReaderMap;
-//import uk.ac.soton.ldanalytics.sparql2sql.util.FormatUtil;
-//
-//public class RdfTableMappingSesame implements RdfTableMapping {
-//	Model mapping = null;
-//	Repository repo = null;
-//	Map<String,Set<String>> joinData = new HashMap<String,Set<String>>();
-//	BGPEngine engine = BGPEngine.JENA;
-//	
-//	public RdfTableMappingSesame() {
-//		mapping = ModelFactory.createDefaultModel();
-//	}
-//	
-//	public RdfTableMappingSesame(BGPEngine engine) {
-//		this.engine = engine;
-//		switch(engine) {
-//			case JENA:
-//				mapping = ModelFactory.createDefaultModel(); 
-//				break;
-//			case SESAME:
-//				repo = new SailRepository(new MemoryStore());
-//				repo.initialize();
-//				break;
-//		}
-//	}
-//	
-//	public void loadMapping(String filename) {
-//		Model map = ModelFactory.createDefaultModel();
-//		RDFReaderMap rd = new RDFReaderMap("N-Triples");
-//		try {
-//			InputStream in = new FileInputStream(filename);
-//			rd.read(map, in,"");
-//			in.close();
-//		} catch(IOException e) {
-//			e.printStackTrace();
-//		}
-////		map.read(filename);
-//		mapping.add(JoinMap(map));
-//	}
-//	
-//	private Model JoinMap(Model map) {
-//		Model newMap = ModelFactory.createDefaultModel();
-//		StmtIterator stmts = map.listStatements();
-//		while(stmts.hasNext()) {
-//			Statement s = stmts.next();
-//			if(s.getSubject().isURIResource() || s.getObject().isURIResource()) {
-//				s = newMap.createStatement(checkUri(s.getSubject().asNode(),newMap).asResource(), s.getPredicate(), checkUri(s.getObject().asNode(),newMap));
+//				 // do something interesting with the values here...
+//			      }
+//			   }  
 //			}
-//			newMap.add(s);
-//		}
-//		return newMap;
-//	}
-//
-//	private RDFNode checkUri(Node node, Model map) {
-//		if(node.isURI()) {
-//			String uri = node.getURI();
-//			if(uri.contains("{")) {
-//				List<String> colList = FormatUtil.extractCols(uri);
-//				uri = uri.replaceAll("\\{.*?}", "\\{\\}");
-//				Set<String> existing = joinData.get(uri);
-//				if(existing==null) {
-//					existing = new HashSet<String>();
-//				}
-//				existing.addAll(colList);
-//				joinData.put(uri, existing);
-//			}
-//		}
-//		return map.asRDFNode(node);
-//	}
-//
-//	public Model getCombinedMapping() {
-//		return mapping;
-//	}
-//}
+		
+		return rs;
+	}
+
+	public Boolean hasResults() {
+		return hasResults;
+	}
+}
