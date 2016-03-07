@@ -122,6 +122,7 @@ public class RdfTableMappingJena implements RdfTableMapping {
 								result.addTable(parts[0]);
 						}
 					}
+//					System.out.println(currentV.toString().replace("?", "") +" "+val);
 					result.addVarMapping(currentV.toString().replace("?", ""),FormatUtil.processNode(val,dialect));
 				}
 			}

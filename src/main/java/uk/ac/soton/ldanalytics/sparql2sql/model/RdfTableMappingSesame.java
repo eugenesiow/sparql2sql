@@ -52,7 +52,7 @@ public class RdfTableMappingSesame implements RdfTableMapping {
 				   while (statements.hasNext()) {
 				      Statement s = statements.next();
 				      if(s.getSubject() instanceof IRI || s.getObject() instanceof IRI) {
-				    	  s = vf.createStatement((Resource)checkUri(s.getSubject()), s.getPredicate(), checkUri(s.getObject()));
+				    	  s = vf.createStatement((Resource)checkUri(s.getSubject(),vf), s.getPredicate(), checkUri(s.getObject(),vf));
 				      }
 				      mapCon.add(s);
 				   }
@@ -69,7 +69,7 @@ public class RdfTableMappingSesame implements RdfTableMapping {
 
 	}
 	
-	private Value checkUri(Value node) {
+	private Value checkUri(Value node, ValueFactory vf) {
 		if(node instanceof IRI) {
 			String uri = node.stringValue();
 			if(uri.contains("{")) {
@@ -82,6 +82,7 @@ public class RdfTableMappingSesame implements RdfTableMapping {
 				existing.addAll(colList);
 				joinData.put(uri, existing);
 			}
+			node = vf.createIRI(uri);
 		}
 		return node;
 	}
@@ -93,43 +94,53 @@ public class RdfTableMappingSesame implements RdfTableMapping {
 			queryStr = queryStr.replaceAll("\\^\\^<.*?>", "");
 			
 			TupleQuery tupleQuery = con.prepareTupleQuery(QueryLanguage.SPARQL, queryStr);
-			rs = ConvertResults(tupleQuery.evaluate());
+			rs = ConvertResults(tupleQuery.evaluate(),con.getValueFactory());
 		}
 		
 		return rs;
 	}
 	
-	private ResultSet ConvertResults(TupleQueryResult results) {
+	private ResultSet ConvertResults(TupleQueryResult results, ValueFactory vf) {
 		ResultSet rs = new ResultSet();
 		while (results.hasNext()) {  // iterate over the result
 			BindingSet b = results.next();
 			Result result = new Result();
 			for(String currentV:b.getBindingNames()) {
 				Value val = b.getValue(currentV);
-				if(currentV.contains("_info_")) {
-					String[] parts = val.stringValue().split("=");
-					if(parts.length>1) {
-						for(int i=0;i<parts.length;i++) {
-							String[] subParts = parts[i].split("\\.");
+				if(val instanceof IRI && val.stringValue().contains("{")) {
+					String uri = val.stringValue();
+					Set<String> joins = joinData.get(val.stringValue());
+					String joinStr = "";
+					if(joins!=null) {
+						uri = uri.replace("{}", "{"+joins.iterator().next()+"}");
+						for(String parts:joins) {
+							String[] subParts = parts.split("\\.");
 							if(subParts.length>1) {
 								if(!Character.isDigit(subParts[1].charAt(0)))
 									result.addTable(subParts[0]);
 							}
+							if(!joinStr.equals(""))
+								joinStr+="=";
+							joinStr+=parts;
 						}
 					}
-					result.addWhere(val.stringValue());
+					if(joinStr.contains("=")) {
+						result.addWhere(joinStr);
+					}
+					val = vf.createIRI(uri);
 				} else {
 					if(val instanceof Literal) {
 						String value = val.stringValue();
 						String[] parts = value.split("\\.");
 						if(parts.length>1) {
-							if(!Character.isDigit(parts[1].charAt(0)))
+							if(!Character.isDigit(parts[1].charAt(0))) {
 								result.addTable(parts[0]);
+							}
 						}
 					}
-					System.out.println(currentV.replace("?", "") + " "+FormatUtil.processValue(val,dialect));
-					result.addVarMapping(currentV.replace("?", ""),FormatUtil.processValue(val,dialect));
 				}
+//				System.out.println(currentV.replace("?", "") + " "+FormatUtil.processValue(val,dialect));
+				result.addVarMapping(currentV.replace("?", ""),FormatUtil.processValue(val,dialect));
 			}
 			rs.add(result);
 		}

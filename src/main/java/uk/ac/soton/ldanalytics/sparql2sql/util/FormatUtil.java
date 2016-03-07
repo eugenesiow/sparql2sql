@@ -145,7 +145,7 @@ public class FormatUtil {
 				concatTail = ")";
 				break;
 			default: 
-				concatHead = "CONCAT{";
+				concatHead = "CONCAT(";
 				concatSeperator = ",";
 				concatTail = ")";
 				break;
