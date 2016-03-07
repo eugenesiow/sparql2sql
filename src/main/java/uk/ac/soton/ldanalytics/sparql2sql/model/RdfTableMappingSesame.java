@@ -10,9 +10,15 @@ import java.util.Set;
 
 import org.openrdf.OpenRDFException;
 import org.openrdf.model.IRI;
+import org.openrdf.model.Literal;
 import org.openrdf.model.Resource;
 import org.openrdf.model.Statement;
 import org.openrdf.model.Value;
+import org.openrdf.model.ValueFactory;
+import org.openrdf.query.BindingSet;
+import org.openrdf.query.QueryLanguage;
+import org.openrdf.query.TupleQuery;
+import org.openrdf.query.TupleQueryResult;
 import org.openrdf.repository.Repository;
 import org.openrdf.repository.RepositoryConnection;
 import org.openrdf.repository.RepositoryResult;
@@ -39,14 +45,16 @@ public class RdfTableMappingSesame implements RdfTableMapping {
 		
 		File file = new File(filename);
 		try (RepositoryConnection con = repo.getConnection()) {
-		   con.add(file, null, RDFFormat.RDFXML);
+		   con.add(file, null, RDFFormat.NTRIPLES);
 		   try (RepositoryConnection mapCon = mapping.getConnection()) {
+			   ValueFactory vf = mapCon.getValueFactory();
 			   try (RepositoryResult<Statement> statements = con.getStatements(null, null, null, false)) {
 				   while (statements.hasNext()) {
 				      Statement s = statements.next();
 				      if(s.getSubject() instanceof IRI || s.getObject() instanceof IRI) {
-				    	  mapCon.add((Resource)checkUri(s.getSubject()), s.getPredicate(), checkUri(s.getObject()));
+				    	  s = vf.createStatement((Resource)checkUri(s.getSubject()), s.getPredicate(), checkUri(s.getObject()));
 				      }
+				      mapCon.add(s);
 				   }
 			   }
 		   } catch (OpenRDFException e1) {
@@ -79,23 +87,53 @@ public class RdfTableMappingSesame implements RdfTableMapping {
 	}
 
 	public ResultSet executeQuery(String queryStr, String dialect) {
-		ResultSet rs = new ResultSet();
-//		try (RepositoryConnection conn = repo.getConnection()) {
-//			   String queryString = "SELECT ?x ?y WHERE { ?x ?p ?y } ";
-//			   TupleQuery tupleQuery = con.prepareTupleQuery(QueryLanguage.SPARQL, queryString);
-//
-//			   TupleQueryResult result = tupleQuery.evaluate(); 
-//			   try (TupleQueryResult result = tupleQuery.evaluate()) {
-//			      while (result.hasNext()) {  // iterate over the result
-//				 BindingSet bindingSet = result.next();
-//				 Value valueOfX = bindingSet.getValue("x");
-//				 Value valueOfY = bindingSet.getValue("y");
-//
-//				 // do something interesting with the values here...
-//			      }
-//			   }  
-//			}
+		ResultSet rs = null;
+		try (RepositoryConnection con = mapping.getConnection()) {
+			//to get sesame to play nice with SPARQL queries with literal types - we remove them temporarily in the queries
+			queryStr = queryStr.replaceAll("\\^\\^<.*?>", "");
+			
+			TupleQuery tupleQuery = con.prepareTupleQuery(QueryLanguage.SPARQL, queryStr);
+			rs = ConvertResults(tupleQuery.evaluate());
+		}
 		
+		return rs;
+	}
+	
+	private ResultSet ConvertResults(TupleQueryResult results) {
+		ResultSet rs = new ResultSet();
+		while (results.hasNext()) {  // iterate over the result
+			BindingSet b = results.next();
+			Result result = new Result();
+			for(String currentV:b.getBindingNames()) {
+				Value val = b.getValue(currentV);
+				if(currentV.contains("_info_")) {
+					String[] parts = val.stringValue().split("=");
+					if(parts.length>1) {
+						for(int i=0;i<parts.length;i++) {
+							String[] subParts = parts[i].split("\\.");
+							if(subParts.length>1) {
+								if(!Character.isDigit(subParts[1].charAt(0)))
+									result.addTable(subParts[0]);
+							}
+						}
+					}
+					result.addWhere(val.stringValue());
+				} else {
+					if(val instanceof Literal) {
+						String value = val.stringValue();
+						String[] parts = value.split("\\.");
+						if(parts.length>1) {
+							if(!Character.isDigit(parts[1].charAt(0)))
+								result.addTable(parts[0]);
+						}
+					}
+					System.out.println(currentV.replace("?", "") + " "+FormatUtil.processValue(val,dialect));
+					result.addVarMapping(currentV.replace("?", ""),FormatUtil.processValue(val,dialect));
+				}
+			}
+			rs.add(result);
+		}
+		results.close();
 		return rs;
 	}
 

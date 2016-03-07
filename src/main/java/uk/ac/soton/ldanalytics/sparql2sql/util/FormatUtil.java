@@ -14,6 +14,9 @@ import org.apache.jena.graph.Node;
 import org.apache.jena.sparql.expr.Expr;
 import org.apache.jena.sparql.expr.ExprFunction;
 import org.apache.jena.sparql.expr.NodeValue;
+import org.openrdf.model.IRI;
+import org.openrdf.model.Literal;
+import org.openrdf.model.Value;
 
 public class FormatUtil {	
 	public static String parseNodeValue(NodeValue node) {
@@ -118,9 +121,7 @@ public class FormatUtil {
 		return expr.toString();
 	}
 
-	public static String processLiteral(Node object) {
-		String litVal = object.getLiteral().getValue().toString();
-		
+	private static String processLiteral(String litVal) {		
 		//put brackets around literal values if they are not mappings
 		String[] parts = litVal.split("\\.");
 		if(parts.length>1) {
@@ -132,7 +133,7 @@ public class FormatUtil {
 		return litVal;
 	}
 	
-	public static String processNode(Node n,String dialect) {
+	private static String processURI(String uri, String dialect) {
 		String concatHead;
 		String concatSeperator;
 		String concatTail;
@@ -150,26 +151,38 @@ public class FormatUtil {
 				break;
 		}
 		
-		if(n.isLiteral()) {
-			return processLiteral(n);
-		} else if(n.isURI()) {
-			String uri = n.getURI();
-			if(uri.contains("{")) {
-				String[] parts = uri.split("\\{");
-				uri = concatHead;
-				for(int i=0;i<parts.length-1;i++) {
-					uri += "'"+parts[i]+"'";
-					String[] subParts = parts[i+1].split("}");
-					uri += concatSeperator + subParts[0];
-				}
-				uri+=concatTail;
-			} else {
-				uri = "'" + uri + "'";
+		if(uri.contains("{")) {
+			String[] parts = uri.split("\\{");
+			uri = concatHead;
+			for(int i=0;i<parts.length-1;i++) {
+				uri += "'"+parts[i]+"'";
+				String[] subParts = parts[i+1].split("}");
+				uri += concatSeperator + subParts[0];
 			}
-			return uri;
+			uri+=concatTail;
 		} else {
-			return n.toString();
+			uri = "'" + uri + "'";
 		}
+		return uri;
+	}
+	
+	public static String processValue(Value v,String dialect) {
+
+		if(v instanceof Literal) {
+			return processLiteral(v.stringValue());
+		} else if(v instanceof IRI) {
+			return processURI(v.stringValue(),dialect);
+		}
+		return v.stringValue();
+	}
+	
+	public static String processNode(Node n,String dialect) {
+		if(n.isLiteral()) {
+			return processLiteral(n.getLiteral().getValue().toString());
+		} else if(n.isURI()) {
+			return processURI(n.getURI(),dialect);
+		}
+		return n.toString();
 	}
 
 	public static boolean isAggVar(Expr expr) {
