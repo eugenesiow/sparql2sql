@@ -1,0 +1,26 @@
+PREFIX  xsd:  <http://www.w3.org/2001/XMLSchema#>
+PREFIX  iotsn: <http://iot.soton.ac.uk/smarthome/sensor#>
+PREFIX  time: <http://www.w3.org/2006/time#>
+PREFIX  ssn:  <http://purl.oclc.org/NET/ssnx/ssn#>
+PREFIX  iot:  <http://purl.oclc.org/NET/iot#>
+
+SELECT ?platform ?dateOnly (sum(?power) as ?totalpower)
+WHERE
+{
+{
+  SELECT ?platform ?hours ?dateOnly (avg(?meterval) as ?power)
+  WHERE
+  {
+    ?meter ssn:onPlatform ?platform.
+    ?meterobs ssn:observedBy ?meter.
+    ?meterobs ssn:observationSamplingTime ?meterinstant;
+      ssn:observationResult ?metersnout.
+    ?meterinstant time:inXSDDateTime ?meterdate.
+    ?metersnout ssn:hasValue ?meterobsval.
+    ?meterobsval a iot:EnergyValue.
+    ?meterobsval iot:hasQuantityValue ?meterval.
+    FILTER(?meterval > 0)
+    FILTER (?meterdate > "2012-07-01T00:00:00"^^xsd:dateTime && ?meterdate < "2012-07-02T00:00:00"^^xsd:dateTime)
+  } GROUP BY ?platform ?meter (hours(?meterdate) as ?hours) (xsd:date(?meterdate) as ?dateOnly)
+}
+} GROUP BY ?platform ?dateOnly

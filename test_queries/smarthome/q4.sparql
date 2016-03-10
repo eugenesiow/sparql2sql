@@ -1,0 +1,41 @@
+  PREFIX  xsd:  <http://www.w3.org/2001/XMLSchema#>
+  PREFIX  iotsn: <http://iot.soton.ac.uk/smarthome/sensor#>
+  PREFIX  time: <http://www.w3.org/2006/time#>
+  PREFIX  ssn:  <http://purl.oclc.org/NET/ssnx/ssn#>
+  PREFIX  iot:  <http://purl.oclc.org/NET/iot#>
+  PREFIX  rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+  SELECT ?motiondate ?motionhours ?motionplatform ?power ?meter ?name WHERE {
+    {
+      SELECT (?platform as ?meterplatform) (?hours as ?meterhours) (?dateOnly as ?meterdate) (avg(?meterval) as ?power) ?meter (sample(?label) as ?name)
+      WHERE
+      {
+        ?meter rdfs:label ?label.
+        ?meter ssn:onPlatform ?platform.
+        ?meterobs ssn:observedBy ?meter.
+        ?meterobs ssn:observationSamplingTime ?meterinstant;
+          ssn:observationResult ?metersnout.
+        ?meterinstant time:inXSDDateTime ?date.
+        ?metersnout ssn:hasValue ?meterobsval.
+        ?meterobsval a iot:EnergyValue.
+        ?meterobsval iot:hasQuantityValue ?meterval.
+        FILTER(?meterval > 0)
+        FILTER (?date > "2012-07-01T00:00:00"^^xsd:dateTime && ?date < "2012-07-07T00:00:00"^^xsd:dateTime)
+      } GROUP BY ?platform (hours(?date) as ?hours) (xsd:date(?date) as ?dateOnly) ?meter
+    }
+    {
+      SELECT (?platform as ?motionplatform) (?hours as ?motionhours) (?dateOnly as ?motiondate)
+      WHERE
+      {
+        ?obsval a iot:MotionValue;
+          iot:hasQuantityValue false.
+        ?snout ssn:hasValue ?obsval.
+        ?obs ssn:observationSamplingTime ?instant;
+          ssn:observationResult ?snout.
+        ?instant time:inXSDDateTime ?date.  
+        ?obs ssn:observedBy ?sensor.
+        ?sensor ssn:onPlatform ?platform.
+        FILTER (?date > "2012-07-01T00:00:00"^^xsd:dateTime && ?date < "2012-07-07T00:00:00"^^xsd:dateTime)
+      } GROUP BY ?platform (hours(?date) as ?hours) (xsd:date(?date) as ?dateOnly)
+    }
+    FILTER(?motionplatform = ?meterplatform && ?motionhours = ?meterhours && ?motiondate = ?meterdate)
+  }

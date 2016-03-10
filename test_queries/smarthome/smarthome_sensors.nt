@@ -1,0 +1,3 @@
+<http://iot.soton.ac.uk/smarthome/sensor#{sensors.SensingDevice}> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://purl.oclc.org/NET/ssnx/ssn#SensingDevice>.
+	<http://iot.soton.ac.uk/smarthome/sensor#{sensors.SensingDevice}> <http://purl.oclc.org/NET/ssnx/ssn#onPlatform> <http://iot.soton.ac.uk/smarthome/platform#{sensors.Location}>.
+	<http://iot.soton.ac.uk/smarthome/sensor#{sensors.SensingDevice}> <http://www.w3.org/2000/01/rdf-schema#label> "sensors.Label".

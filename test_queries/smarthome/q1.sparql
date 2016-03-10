@@ -1,0 +1,17 @@
+PREFIX ssn: <http://purl.oclc.org/NET/ssnx/ssn#>
+PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
+PREFIX time: <http://www.w3.org/2006/time#>
+PREFIX iotsn: <http://iot.soton.ac.uk/smarthome/sensor#>
+PREFIX iot: <http://purl.oclc.org/NET/iot#>
+
+SELECT (avg(?val) as ?sval) ?hours
+WHERE {
+  ?instant time:inXSDDateTime ?date.
+  ?obs ssn:observationSamplingTime ?instant;
+  	ssn:observedBy iotsn:environmental1;
+    ssn:observationResult ?snout.
+  ?snout ssn:hasValue ?obsval.
+  ?obsval a iot:InternalTemperatureValue;
+    iot:hasQuantityValue ?val.
+  FILTER (?date > "2012-07-20T00:00:00"^^xsd:dateTime && ?date < "2012-07-21T00:00:00"^^xsd:dateTime)
+} GROUP BY (hours(xsd:dateTime(?date)) as ?hours)

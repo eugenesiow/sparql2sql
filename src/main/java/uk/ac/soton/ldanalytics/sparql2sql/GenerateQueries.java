@@ -68,6 +68,8 @@ public class GenerateQueries {
 		options.addOption(output);
 		options.addOption(engine);
 		
+//		args = new String[]{ "-I test_queries/smarthome", "-O test_queries/smarthome", "-C test_queries/smarthome", "-E Jena"};
+		
 		try {
 			CommandLineParser parser = new DefaultParser();
 			CommandLine cmd = parser.parse(options, args);
