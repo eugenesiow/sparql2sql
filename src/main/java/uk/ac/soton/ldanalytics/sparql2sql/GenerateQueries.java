@@ -68,7 +68,7 @@ public class GenerateQueries {
 		options.addOption(output);
 		options.addOption(engine);
 		
-//		args = new String[]{ "-I test_queries/smarthome", "-O test_queries/smarthome", "-C test_queries/smarthome", "-E Jena"};
+//		args = new String[]{ "-I test_queries/smarthome", "-O test_queries/smarthome/jena", "-C test_queries/smarthome", "-E Jena"};
 		
 		try {
 			CommandLineParser parser = new DefaultParser();
@@ -97,7 +97,7 @@ public class GenerateQueries {
 						BufferedReader br = new BufferedReader(new FileReader(configFile));
 						String line="";
 						while((line=br.readLine())!=null) {
-							mapping.loadMapping(line);
+							mapping.loadMapping(configPath + File.separator + line);
 						}
 						br.close();
 						
@@ -116,7 +116,9 @@ public class GenerateQueries {
 						SQLFormatter formatter = new SQLFormatter();
 						String sql = formatter.format(v.getSQL());
 						try {
-							BufferedWriter bw = new BufferedWriter(new FileWriter(outputPath + File.separator + outputFileName));
+							File outFile = new File(outputPath + File.separator + outputFileName);
+							outFile.getParentFile().mkdirs();
+							BufferedWriter bw = new BufferedWriter(new FileWriter(outFile));
 							bw.append(sql);
 							bw.close();
 						} catch(IOException e) {
