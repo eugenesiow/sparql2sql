@@ -24,14 +24,12 @@ Download the [release](https://github.com/eugenesiow/sparql2sql/releases/downloa
 - Modify `test_queries_smarthome.sh` or `test_queries_srbench.sh` to change parameters of the run
 - The usage of the GenerateQueries class is as follows
 
-		```
 		usage: LSDTransform -C <folder path> -E <engine name> -I <folder path> -O
 		       <folder path>
 		 -C,--config <folder path>   the config folder path
 		 -E,--engine <engine name>   the engine to use (e.g. Jena, Sesame)
 		 -I,--src <folder path>      the source folder path
 		 -O,--output <folder path>   the output folder path
-		 ```
 - Config files contain a relative path to the mapping from the config path on each line
 
 ### sparql2sql Server
