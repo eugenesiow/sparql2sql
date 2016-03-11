@@ -79,6 +79,8 @@ public class GenerateQueries {
 			String outputPath = cmd.getOptionValue( "O" ).trim();
 			String engineName = cmd.getOptionValue( "E" ).trim().toLowerCase();
 			
+			System.out.println("Query\t:LoadMapping(ms)\t:Translate");
+			
 			File folder = new File(inputPath);
 			for(File file:folder.listFiles()) {
 				String fileName = file.getName(); 
@@ -94,6 +96,7 @@ public class GenerateQueries {
 							mapping = new RdfTableMappingJena();
 						}
 						
+						long startTime = System.currentTimeMillis();
 						BufferedReader br = new BufferedReader(new FileReader(configFile));
 						String line="";
 						while((line=br.readLine())!=null) {
@@ -108,6 +111,7 @@ public class GenerateQueries {
 							e.printStackTrace();
 						}
 						
+						long queryStartTime = System.currentTimeMillis();
 						Query query = QueryFactory.create(queryStr);
 						Op op = Algebra.compile(query);
 						SparqlOpVisitor v = new SparqlOpVisitor();
@@ -115,6 +119,8 @@ public class GenerateQueries {
 						OpWalker.walk(op,v);
 						SQLFormatter formatter = new SQLFormatter();
 						String sql = formatter.format(v.getSQL());
+						long endTime = System.currentTimeMillis();
+						
 						try {
 							File outFile = new File(outputPath + File.separator + outputFileName);
 							outFile.getParentFile().mkdirs();
@@ -124,6 +130,8 @@ public class GenerateQueries {
 						} catch(IOException e) {
 							e.printStackTrace();
 						}
+						
+						System.out.println(fileName + "\t:" + (queryStartTime - startTime) + "\t:" + (endTime - queryStartTime));
 					} else {
 						System.err.println("Config File: "+configFileName+" not found.");
 					}

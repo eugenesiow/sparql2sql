@@ -23,11 +23,11 @@
       } GROUP BY ?platform (hours(?date) as ?hours) (xsd:date(?date) as ?dateOnly) ?meter
     }
     {
-      SELECT (?platform as ?motionplatform) (?hours as ?motionhours) (?dateOnly as ?motiondate)
+      SELECT (sum(?motionOrNot) as ?isMotion) (?platform as ?motionplatform) (?hours as ?motionhours) (?dateOnly as ?motiondate)
       WHERE
       {
         ?obsval a iot:MotionValue;
-          iot:hasQuantityValue false.
+          iot:hasQuantityValue ?motionOrNot.
         ?snout ssn:hasValue ?obsval.
         ?obs ssn:observationSamplingTime ?instant;
           ssn:observationResult ?snout.
@@ -37,5 +37,5 @@
         FILTER (?date > "2012-07-01T00:00:00"^^xsd:dateTime && ?date < "2012-07-07T00:00:00"^^xsd:dateTime)
       } GROUP BY ?platform (hours(?date) as ?hours) (xsd:date(?date) as ?dateOnly)
     }
-    FILTER(?motionplatform = ?meterplatform && ?motionhours = ?meterhours && ?motiondate = ?meterdate)
+    FILTER(?motionplatform = ?meterplatform && ?motionhours = ?meterhours && ?motiondate = ?meterdate && ?isMotion=0)
   }
