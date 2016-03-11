@@ -295,20 +295,23 @@ public class SparqlOpVisitor implements OpVisitor {
 	public void visit(OpLeftJoin arg0) {
 		
 		if(hasResults.size()>1) {
-			Boolean discardRow = false;
 			for(Result right:bgpBindings.get(1)) {
 				for(Result left:bgpBindings.get(0)) {
-//					System.out.println(right +" "+ left);
+					Boolean discardRow = false;
+//					System.out.println(right.getVarMapping() +" "+ left.getVarMapping());
 					for(String v:right.getVarMapping().keySet()) {
 						if(left.getVarMapping().containsKey(v)) {
 							if(!left.getVarMapping().get(v).equals(right.getVarMapping().get(v))) {
+//								System.out.println(left.getVarMapping().get(v) + " " +right.getVarMapping().get(v));
 								discardRow = true;
 								break;
 							}
 						}
 					}
-					if(!discardRow)
+//					System.out.println(discardRow);
+					if(!discardRow) {
 						AddVarMappings(right);
+					}
 				}
 			}
 		}

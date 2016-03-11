@@ -1,0 +1,39 @@
+PREFIX om-owl: <http://knoesis.wright.edu/ssw/ont/sensor-observation.owl#>
+PREFIX weather: <http://knoesis.wright.edu/ssw/ont/weather.owl#>
+PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
+PREFIX owl-time: <http://www.w3.org/2006/time#>
+PREFIX wgs84_pos: <http://www.w3.org/2003/01/geo/wgs84_pos#>
+
+SELECT ( IF(AVG(?windSpeed) < 1,  0,
+          IF(AVG(?windSpeed) < 4,  1,
+           IF(AVG(?windSpeed) < 8,  2,
+            IF(AVG(?windSpeed) < 13, 3,
+             IF(AVG(?windSpeed) < 18, 4,
+              IF(AVG(?windSpeed) < 25, 5,
+               IF(AVG(?windSpeed) < 31, 6,
+                IF(AVG(?windSpeed) < 39, 7,
+                 IF(AVG(?windSpeed) < 47, 8,
+                  IF(AVG(?windSpeed) < 55, 9,
+                   IF(AVG(?windSpeed) < 64, 10,
+                    IF(AVG(?windSpeed) < 73, 11, 12) )))))))))))
+         AS ?windForce )
+       ( AVG(?windDirection) AS ?avgWindDirection )
+WHERE {
+  ?sensor om-owl:generatedObservation ?o1 ;
+          om-owl:generatedObservation ?o2 .
+  ?sensor om-owl:processLocation ?sensorLocation .
+    ?sensorLocation wgs84_pos:alt "5350"^^xsd:float ;
+                  wgs84_pos:lat "40.82944"^^xsd:float ;
+                  wgs84_pos:long "-111.88222"^^xsd:float .
+  ?o1 a weather:WindDirectionObservation ;
+      om-owl:observedProperty weather:_WindDirection ;
+      om-owl:result [om-owl:floatValue ?windDirection] ;
+      om-owl:samplingTime ?instant .
+  ?o2 a weather:WindSpeedObservation ;
+      om-owl:observedProperty weather:_WindSpeed ;
+      om-owl:result [om-owl:floatValue ?windSpeed] ;
+      om-owl:samplingTime ?instant .
+  ?instant owl-time:inXSDDateTime ?time .
+  FILTER (?time>"2003-04-01T00:00:00"^^xsd:dateTime && ?time<"2003-04-02T00:00:00"^^xsd:dateTime)
+}
+GROUP BY ?sensor

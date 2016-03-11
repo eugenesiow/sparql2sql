@@ -1,0 +1,13 @@
+PREFIX om-owl: <http://knoesis.wright.edu/ssw/ont/sensor-observation.owl#>
+PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
+PREFIX owl-time: <http://www.w3.org/2006/time#>
+
+SELECT ?sensor
+WHERE {
+	?sensor om-owl:generatedObservation ?observation.
+	?observation om-owl:samplingTime ?instant .
+	?instant owl-time:inXSDDateTime ?time .
+	FILTER (?time>"2003-04-01T00:00:00"^^xsd:dateTime && ?time<"2003-04-01T01:00:00"^^xsd:dateTime)
+}
+GROUP BY ?sensor
+HAVING (count(?time) = 0)

@@ -1,0 +1,14 @@
+PREFIX om-owl: <http://knoesis.wright.edu/ssw/ont/sensor-observation.owl#>
+PREFIX weather: <http://knoesis.wright.edu/ssw/ont/weather.owl#>
+PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
+PREFIX owl-time: <http://www.w3.org/2006/time#>
+
+SELECT ?sensor WHERE {
+	?observation om-owl:procedure ?sensor ;
+	           om-owl:observedProperty weather:_WindSpeed ;
+	           om-owl:result [ om-owl:floatValue ?value ] ;
+	           om-owl:samplingTime ?instant .
+	?instant owl-time:inXSDDateTime ?time .
+	FILTER (?time>"2003-04-01T00:00:00"^^xsd:dateTime && ?time<"2003-04-01T01:00:00"^^xsd:dateTime)
+} GROUP BY ?sensor
+HAVING ( AVG(?value) >= "74"^^xsd:float )

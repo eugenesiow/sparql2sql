@@ -1,0 +1,19 @@
+PREFIX om-owl: <http://knoesis.wright.edu/ssw/ont/sensor-observation.owl#>
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX weather: <http://knoesis.wright.edu/ssw/ont/weather.owl#>
+PREFIX owl-time: <http://www.w3.org/2006/time#>
+PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
+
+SELECT DISTINCT ?sensor ?value ?uom
+WHERE {
+  ?observation om-owl:procedure ?sensor ;
+               a weather:RainfallObservation ;
+               om-owl:result ?result ;
+               om-owl:samplingTime ?instant .
+  ?instant owl-time:inXSDDateTime ?time .
+  ?result om-owl:floatValue ?value .
+  OPTIONAL {
+    ?result om-owl:uom ?uom .
+  }
+  FILTER (?time>="2003-04-03T16:00:00"^^xsd:dateTime && ?time<"2003-04-03T17:00:00"^^xsd:dateTime)
+}

@@ -1,0 +1,23 @@
+
+PREFIX om-owl: <http://knoesis.wright.edu/ssw/ont/sensor-observation.owl#>
+PREFIX weather: <http://knoesis.wright.edu/ssw/ont/weather.owl#>
+PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
+PREFIX owl-time: <http://www.w3.org/2006/time#>
+
+SELECT ?sensor (AVG(?windSpeed) AS ?averageWindSpeed)
+               (AVG(?temperature) AS ?averageTemperature)
+WHERE {
+  ?temperatureObservation om-owl:procedure ?sensor ;
+                          a weather:TemperatureObservation ;
+                          om-owl:result ?temperatureResult ;
+                          om-owl:samplingTime ?instant .
+  ?instant owl-time:inXSDDateTime ?time .
+  FILTER (?time>"2003-04-01T00:00:00"^^xsd:dateTime && ?time<"2003-04-01T01:00:00"^^xsd:dateTime)
+  ?temperatureResult om-owl:floatValue ?temperature.
+  FILTER(?temperature > "32"^^xsd:float)
+  ?windSpeedObservation om-owl:procedure ?sensor ;
+                        a weather:WindSpeedObservation ;
+                        om-owl:samplingTime ?instant ;
+                        om-owl:result [ om-owl:floatValue ?windSpeed ]  .
+}
+GROUP BY ?sensor
