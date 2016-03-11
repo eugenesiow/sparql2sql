@@ -126,6 +126,9 @@ public class SparqlOpVisitor implements OpVisitor {
 			AddVarMappings(result);
 		}
 		bgpBindings.add(bindingSet);
+//		for(Result r:bindingSet) {
+//			System.out.println(r.getVarMapping());
+//		}
 		return hasResults;
 	}
 
@@ -293,7 +296,6 @@ public class SparqlOpVisitor implements OpVisitor {
 	}
 
 	public void visit(OpLeftJoin arg0) {
-		
 		if(hasResults.size()>1) {
 			for(Result right:bgpBindings.get(1)) {
 				for(Result left:bgpBindings.get(0)) {

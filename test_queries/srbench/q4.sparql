@@ -1,4 +1,3 @@
-
 PREFIX om-owl: <http://knoesis.wright.edu/ssw/ont/sensor-observation.owl#>
 PREFIX weather: <http://knoesis.wright.edu/ssw/ont/weather.owl#>
 PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
@@ -9,6 +8,7 @@ SELECT ?sensor (AVG(?windSpeed) AS ?averageWindSpeed)
 WHERE {
   ?temperatureObservation om-owl:procedure ?sensor ;
                           a weather:TemperatureObservation ;
+                          om-owl:observedProperty weather:_AirTemperature;
                           om-owl:result ?temperatureResult ;
                           om-owl:samplingTime ?instant .
   ?instant owl-time:inXSDDateTime ?time .
@@ -17,6 +17,7 @@ WHERE {
   FILTER(?temperature > "32"^^xsd:float)
   ?windSpeedObservation om-owl:procedure ?sensor ;
                         a weather:WindSpeedObservation ;
+                        om-owl:observedProperty weather:_WindSpeed;
                         om-owl:samplingTime ?instant ;
                         om-owl:result [ om-owl:floatValue ?windSpeed ]  .
 }
