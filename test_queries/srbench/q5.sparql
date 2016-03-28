@@ -12,7 +12,7 @@ WHERE {
       om-owl:observedProperty weather:_AirTemperature ;
       om-owl:result [om-owl:floatValue ?temperature] ;
       om-owl:samplingTime ?instant .
-  ?o2 a weather:WindObservation ;
+  ?o2 a weather:WindSpeedObservation ;
       om-owl:observedProperty weather:_WindSpeed ;
       om-owl:result [om-owl:floatValue ?windSpeed] ;
       om-owl:samplingTime ?instant .

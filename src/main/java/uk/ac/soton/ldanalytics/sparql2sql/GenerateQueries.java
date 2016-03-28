@@ -68,6 +68,7 @@ public class GenerateQueries {
 		options.addOption(output);
 		options.addOption(engine);
 		
+//		args = new String[]{"-I test_queries/srbench", "-O test_queries/srbench/jena", "-C test_queries/srbench", "-E Jena"};
 //		args = new String[]{ "-I test_queries/smarthome", "-O test_queries/smarthome/jena", "-C test_queries/smarthome", "-E Jena"};
 		
 		try {
