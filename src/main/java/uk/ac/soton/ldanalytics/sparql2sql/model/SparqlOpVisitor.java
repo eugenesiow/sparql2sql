@@ -465,6 +465,7 @@ public class SparqlOpVisitor implements OpVisitor {
 //				count--;
 			}
 		}
+//		System.out.println(selectClause);
 		
 		count = 0; //add from tables
 		for(String table:tableList) {
@@ -575,7 +576,19 @@ public class SparqlOpVisitor implements OpVisitor {
 			return "";
 		} 
 		if(fromClause.trim().equals("FROM")) {
-			return "";
+			if(dialect.equals("ESPER") && uriToSyntax.size()>0) {
+				for(String val:uriToSyntax.values()) {
+					for(Entry<String,String> pair:tableToSyntax.entrySet()) {
+						if(pair.getValue().equals(val)) {
+							val = pair.getKey() + val;
+							break;
+						}
+					}
+					fromClause += " " + val;
+				}
+			} else {
+				return "";
+			}
 		}
 		if(whereClause.trim().equals("WHERE")) {
 			whereClause = "";

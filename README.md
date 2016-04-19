@@ -12,7 +12,7 @@ The translated queries using the engine can be found on https://github.com/eugen
 
 The translated queries using the engine can be found on https://github.com/eugenesiow/ldanalytics-PiSmartHome/wiki.
 
-### Running the engine for the benchmarks
+### Running the engine for translating benchmark queries
 Download the [release](https://github.com/eugenesiow/sparql2sql/releases/download/0.1.0/sparql2sql.zip).
 
 - Uncompress the release `unzip sparql2sql.zip`
@@ -31,6 +31,21 @@ Download the [release](https://github.com/eugenesiow/sparql2sql/releases/downloa
 		 -I,--src <folder path>      the source folder path
 		 -O,--output <folder path>   the output folder path
 - Config files contain a relative path to the mapping from the config path on each line
+
+### Running sparql2sql benchmarks
+Benchmarking with SRBench and the Smart Home Analytics Benchmark.
+ 
+* For [GraphDB (OWLIM)](https://github.com/eugenesiow/lsd-ETL/wiki/GraphDB)
+* For [Jena Tuple Database (TDB)](https://github.com/eugenesiow/lsd-ETL/wiki/TDB)
+* For [sparql2sql (with H2)](https://github.com/eugenesiow/lsd-ETL/wiki/H2)
+* For [ontop](https://github.com/eugenesiow/lsd-ETL/wiki/ontop)
+* For [morph](https://github.com/eugenesiow/lsd-ETL/wiki/morph)
+
+### Streaming version and benchmarks (sparql2stream)
+Benchmarking with SRBench and the Smart Home Analytics Benchmark.
+ 
+* For [sparql2stream](https://github.com/eugenesiow/sparql2stream)
+* For [CQELS](https://github.com/eugenesiow/cqels)
 
 ### sparql2sql Server
 
