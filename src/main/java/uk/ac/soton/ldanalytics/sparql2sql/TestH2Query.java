@@ -24,16 +24,36 @@ public class TestH2Query {
 	public static void main(String[] args) {
 //		String folderPath = "/Users/eugene/Downloads/knoesis_observations_map_meta/";
 		String folderPath = "/Users/eugene/Downloads/knoesis_observations_map_snow_meta/";
-		String queryPath = "/Users/eugene/Dropbox/Private/WORK/LinkedSensorData/queries/";
+        if (args.length > 0) {
+        	folderPath = args[0];
+        }
+        String queryPath = "/Users/eugene/Dropbox/Private/WORK/LinkedSensorData/queries/";
 //		String outputPath = "/Users/eugene/Downloads/knoesis_results/";
+        if (args.length > 1) {
+        	queryPath = args[1];
+        }
 		String outputPath = "/Users/eugene/Downloads/knoesis_results_snow/";
-		File folder = new File(folderPath);
+		if (args.length > 2) {
+			outputPath = args[2];
+        }
+		String queryName = "q10";
+		if (args.length > 3) {
+			queryName = args[3];
+        }
+		int runs = 3;
+		if (args.length > 4) {
+			runs = Integer.parseInt(args[4]);
+        }
+		String h2connection = "jdbc:h2:tcp://192.168.0.103/~/h2/LSD_h2_databases/";
+		if (args.length > 5) {
+			h2connection = args[5];
+        }
+		File folder = new File(folderPath);		
 		
 		try {
 			Class.forName("org.h2.Driver");
 			
-			String queryName = "q10";
-			for(int run=1;run<=3;run++) {
+			for(int run=1;run<=runs;run++) {
 				String queryStr = FileUtils.readFileToString(new File(queryPath + queryName + ".sparql"));
 			
 				int totalCount = 0;
@@ -64,7 +84,7 @@ public class TestH2Query {
 					if(!sql.trim().equals("")) {
 						startTime = System.currentTimeMillis();
 						try {
-							Connection conn = DriverManager.getConnection("jdbc:h2:tcp://192.168.0.103/~/h2/LSD_h2_databases/"+stationName, "sa", "");
+							Connection conn = DriverManager.getConnection(h2connection+stationName, "sa", "");
 							Statement stat = conn.createStatement();
 							ResultSet rs = stat.executeQuery(sql);
 							while (rs.next()) {
