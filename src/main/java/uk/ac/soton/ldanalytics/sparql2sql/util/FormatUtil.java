@@ -1,6 +1,7 @@
 package uk.ac.soton.ldanalytics.sparql2sql.util;
 
 import java.io.BufferedReader;
+
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -18,7 +19,7 @@ import org.openrdf.model.IRI;
 import org.openrdf.model.Literal;
 import org.openrdf.model.Value;
 
-public class FormatUtil {	
+public class FormatUtil {		
 	public static String parseNodeValue(NodeValue node) {
 		if(node.isDateTime()) {
 			return "'" + node.getDateTime().toString() + "'";
@@ -121,15 +122,20 @@ public class FormatUtil {
 		return expr.toString();
 	}
 
-	private static String processLiteral(String litVal) {		
+	private static String processLiteral(String litVal, String datatype) {
+//		System.out.println(litVal + "," + datatype);
 		//put brackets around literal values if they are not mappings
-		String[] parts = litVal.split("\\.");
-		if(parts.length>1) {
-			if(Character.isDigit(parts[1].charAt(0)))
+		if(datatype.equals(S2SML.LITERAL_MAP_IRI)) {
+			String[] parts = litVal.split("\\.");
+			if(parts.length>1) {
+				if(Character.isDigit(parts[1].charAt(0)))
+					litVal = "'" + litVal + "'";
+			} else {
 				litVal = "'" + litVal + "'";
+			}
 		} else {
 			litVal = "'" + litVal + "'";
-		}
+		}		
 		return litVal;
 	}
 	
@@ -167,9 +173,8 @@ public class FormatUtil {
 	}
 	
 	public static String processValue(Value v,String dialect) {
-
 		if(v instanceof Literal) {
-			return processLiteral(v.stringValue());
+			return processLiteral(v.stringValue(),((Literal) v).getDatatype().stringValue());
 		} else if(v instanceof IRI) {
 			return processURI(v.stringValue(),dialect);
 		}
@@ -178,7 +183,7 @@ public class FormatUtil {
 	
 	public static String processNode(Node n,String dialect) {
 		if(n.isLiteral()) {
-			return processLiteral(n.getLiteral().getValue().toString());
+			return processLiteral(n.getLiteralLexicalForm(),n.getLiteralDatatypeURI());
 		} else if(n.isURI()) {
 			return processURI(n.getURI(),dialect);
 		}

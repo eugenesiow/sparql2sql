@@ -27,6 +27,7 @@ import org.openrdf.rio.RDFFormat;
 import org.openrdf.sail.memory.MemoryStore;
 
 import uk.ac.soton.ldanalytics.sparql2sql.util.FormatUtil;
+import uk.ac.soton.ldanalytics.sparql2sql.util.S2SML;
 
 public class RdfTableMappingSesame implements RdfTableMapping {
 	Repository mapping = null;
@@ -131,10 +132,13 @@ public class RdfTableMappingSesame implements RdfTableMapping {
 				} else {
 					if(val instanceof Literal) {
 						String value = val.stringValue();
-						String[] parts = value.split("\\.");
-						if(parts.length>1) {
-							if(!Character.isDigit(parts[1].charAt(0))) {
-								result.addTable(parts[0]);
+						String datatype = ((Literal) val).getDatatype().stringValue();
+						if(datatype.equals(S2SML.LITERAL_MAP_IRI)) {
+							String[] parts = value.split("\\.");
+							if(parts.length>1) {
+								if(!Character.isDigit(parts[1].charAt(0))) {
+									result.addTable(parts[0]);
+								}
 							}
 						}
 					}

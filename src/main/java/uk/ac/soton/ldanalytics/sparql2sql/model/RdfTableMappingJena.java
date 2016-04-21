@@ -26,6 +26,7 @@ import org.openrdf.repository.Repository;
 
 import uk.ac.soton.ldanalytics.sparql2sql.riot.RDFReaderMap;
 import uk.ac.soton.ldanalytics.sparql2sql.util.FormatUtil;
+import uk.ac.soton.ldanalytics.sparql2sql.util.S2SML;
 
 public class RdfTableMappingJena implements RdfTableMapping {
 	Model mapping = null;
@@ -116,10 +117,13 @@ public class RdfTableMappingJena implements RdfTableMapping {
 				} else {
 					if(val.isLiteral()) {
 						String value = val.getLiteralValue().toString();
-						String[] parts = value.split("\\.");
-						if(parts.length>1) {
-							if(!Character.isDigit(parts[1].charAt(0)))
-								result.addTable(parts[0]);
+						String datatype = val.getLiteralDatatypeURI();
+						if(datatype.equals(S2SML.LITERAL_MAP_IRI)) {
+							String[] parts = value.split("\\.");
+							if(parts.length>1) {
+								if(!Character.isDigit(parts[1].charAt(0)))
+									result.addTable(parts[0]);
+							}
 						}
 					}
 //					System.out.println(currentV.toString().replace("?", "") +" "+val);

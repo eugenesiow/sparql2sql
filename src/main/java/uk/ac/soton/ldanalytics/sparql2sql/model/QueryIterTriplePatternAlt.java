@@ -5,6 +5,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import uk.ac.soton.ldanalytics.sparql2sql.util.FormatUtil;
+import uk.ac.soton.ldanalytics.sparql2sql.util.S2SML;
 
 import org.apache.jena.graph.Graph;
 import org.apache.jena.graph.Node;
@@ -169,12 +170,16 @@ public class QueryIterTriplePatternAlt extends QueryIterRepeatApply
         	if(inputNode.isLiteral()) {
 //    			System.out.println(inputNode + " " + outputNode);
         		String outVal = outputNode.getLiteralValue().toString();
-        		String[] outParts = outVal.split("\\.");
-        		if(outParts.length>1) {
-        			if(!Character.isDigit(outParts[1].charAt(0))) {
-        				addInfoBinding(NodeFactory.createLiteral(outVal+"='"+inputNode.getLiteralValue().toString()+"'"),results);
-        				return true;
-        			}
+        		String datatype = outputNode.getLiteralDatatypeURI();
+        		
+        		if(datatype.equals(S2SML.LITERAL_MAP_IRI)) {
+	        		String[] outParts = outVal.split("\\.");
+	        		if(outParts.length>1) {
+	        			if(!Character.isDigit(outParts[1].charAt(0))) {
+	        				addInfoBinding(NodeFactory.createLiteral(outVal+"='"+inputNode.getLiteralValue().toString()+"'"),results);
+	        				return true;
+	        			}
+	        		}
         		}
         		if(inputNode.getLiteralDatatype()!=null && outputNode.getLiteralDatatype()!=null) {
 	        		if(!inputNode.getLiteralDatatype().equals(outputNode.getLiteralDatatype())) {
