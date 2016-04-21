@@ -1,5 +1,5 @@
 # sparql2sql
-SPARQL to SQL with less joins
+SPARQL to SQL with less joins. Most information about sparql2sql can be found on the [wiki](https://github.com/eugenesiow/sparql2sql/wiki). This includes a reference for the [S2SML](https://github.com/eugenesiow/sparql2sql/wiki/S2SML) language for sparql2sql mappings, [benchmarks](https://github.com/eugenesiow/sparql2sql/wiki/Benchmarks), implementation of the [swappable BGP resolution interface](https://github.com/eugenesiow/sparql2sql/wiki/SWIBRE), etc.
 
 ### Transforming Linked Sensor Data from RDF to RDBMS 
 To run SRBench on sparql2sql, follow the procedure using the LSD-ETL tool to transform LSD from RDF to RDBMS at https://github.com/eugenesiow/lsd-ETL.
