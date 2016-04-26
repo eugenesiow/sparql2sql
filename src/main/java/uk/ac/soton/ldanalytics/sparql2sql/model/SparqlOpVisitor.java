@@ -49,7 +49,6 @@ import org.apache.jena.sparql.algebra.op.OpTriple;
 import org.apache.jena.sparql.algebra.op.OpUnion;
 import org.apache.jena.sparql.core.Var;
 import org.apache.jena.sparql.core.VarExprList;
-import org.apache.jena.sparql.engine.binding.Binding;
 import org.apache.jena.sparql.engine.main.StageGenerator;
 import org.apache.jena.sparql.expr.Expr;
 import org.apache.jena.sparql.expr.ExprAggregator;
@@ -61,11 +60,13 @@ public class SparqlOpVisitor implements OpVisitor {
 	
 	RdfTableMapping mapping = null;
 	List<List<Result>> bgpBindings = new ArrayList<List<Result>>();
-	Map<String,String> varMapping = new HashMap<String,String>();
+	List<Map<String,String>> varMappings = new ArrayList<Map<String,String>>();
+//	Map<String,String> varMapping = new HashMap<String,String>();
 	Map<String,String> aliases = new HashMap<String,String>();
 	Set<String> tableList = new HashSet<String>();
 	List<String> previousSelects = new ArrayList<String>();
-	List<String> filterList = new ArrayList<String>();
+	List<String> unionSelects = new ArrayList<String>();
+	List<List<String>> filterList = new ArrayList<List<String>>();
 	List<String> unionList = new ArrayList<String>();
 	List<Boolean> hasResults = new ArrayList<Boolean>();
 	Map<String,String> uriToSyntax = new HashMap<String,String>();	
@@ -79,17 +80,29 @@ public class SparqlOpVisitor implements OpVisitor {
 	
 	String dialect = "H2";
 	Boolean bgpStarted = false;
+	Boolean unionStarted = false;
 	
+	/**
+	 * trans() function that walks/visits nodes in the algebra tree 
+	 */
 	public SparqlOpVisitor() {
 		StageGenerator origStageGen = (StageGenerator)ARQ.getContext().get(ARQ.stageGenerator) ;
         StageGenerator stageGenAlt = new StageGeneratorAlt(origStageGen) ;
         ARQ.getContext().set(ARQ.stageGenerator, stageGenAlt) ;
 	}
 	
+	/**
+	 * Assigns a mapping closure for the algebra to be executed against
+	 * @param mapping a mapping closure 
+	 */
 	public void useMapping(RdfTableMapping mapping) {
 		this.mapping = mapping;
 	}
 
+	
+	/**
+	 * BGP Resolution visitor
+	 */
 	public void visit(OpBGP bgp) {
 		bgpStarted = true;
 		
@@ -117,23 +130,34 @@ public class SparqlOpVisitor implements OpVisitor {
 //		}
 	}
 	
+	/**
+	 * Processes the ResultSet from the BGP resolution engine to produce a VarMapping (vk,vv) mapping
+	 * @param results ResultSet from the BGP resolution engine
+	 * @return Boolean on whether there are any results
+	 */
 	private Boolean ProcessResults(ResultSet results) {
 		Boolean hasResults = false;
 		List<Result> bindingSet = new ArrayList<Result>();
+		int size = 0;
 		for(Result result:results.getResults()) {
 			hasResults = true;
 			bindingSet.add(result);
 			AddVarMappings(result);
+			size++;
 		}
+		if(size>1) unionStarted = true;
 		bgpBindings.add(bindingSet);
 //		for(Result r:bindingSet) {
 //			System.out.println(r.getVarMapping());
 //		}
 		return hasResults;
 	}
-
+	
 	private void AddVarMappings(Result rs) {
+		Map<String,String> varMapping = new HashMap<String,String> ();
 		varMapping.putAll(rs.getVarMapping());
+		varMappings.add(varMapping);
+		//TODO: might need separate tablelists for different resultsets
 		tableList.addAll(rs.getTableList());
 		if(!whereClause.trim().equals("WHERE"))
 			whereClause += " AND ";
@@ -205,32 +229,38 @@ public class SparqlOpVisitor implements OpVisitor {
 	}
 
 	public void visit(OpFilter filters) {
-		String filterStr = "";
 //		System.out.println(allSelectedNodes.get(allSelectedNodes.size()-1).size());
 //		System.out.println("Filter");	
-		for(Expr filter:filters.getExprs().getList()) {
-			SparqlFilterExprVisitor v = new SparqlFilterExprVisitor();
-			v.setMapping(varMapping);
-			ExprWalker.walk(v,filter);
-			v.finishVisit();
-			String modifier = "";
-			if(!v.getExpression().equals("")) {
-//				if(!whereClause.equals("WHERE ")) {
-//					modifier = " AND ";
-//				}
-				if(!filterStr.equals("")) {
-					modifier = " AND ";
+		
+		List<String> filterStrs = new ArrayList<String>();
+		for(Map<String,String> varMapping:varMappings) {
+			String filterStr = "";
+			for(Expr filter:filters.getExprs().getList()) {
+				SparqlFilterExprVisitor v = new SparqlFilterExprVisitor();
+				v.setMapping(varMapping);
+				ExprWalker.walk(v,filter);
+				v.finishVisit();
+				String modifier = "";
+				if(!v.getExpression().equals("")) {
+	//				if(!whereClause.equals("WHERE ")) {
+	//					modifier = " AND ";
+	//				}
+					if(!filterStr.equals("")) {
+						modifier = " AND ";
+					}
+					filterStr += modifier + v.getExpression();
+	//				whereClause += modifier + v.getExpression();
+				} else if(!v.getHavingExpression().equals("")) {
+					if(!havingClause.equals("HAVING ")) {
+						modifier = " AND ";
+					}
+					havingClause += modifier + v.getHavingExpression();
 				}
-				filterStr += modifier + v.getExpression();
-//				whereClause += modifier + v.getExpression();
-			} else if(!v.getHavingExpression().equals("")) {
-				if(!havingClause.equals("HAVING ")) {
-					modifier = " AND ";
-				}
-				havingClause += modifier + v.getHavingExpression();
 			}
+			filterStrs.add(filterStr);
 		}
-		filterList.add(filterStr);
+		filterList.add(filterStrs);
+		
 		
 //		System.out.println(whereClause);
 	}
@@ -267,25 +297,29 @@ public class SparqlOpVisitor implements OpVisitor {
 			Expr expr = vars.getExpr(var);
 			String originalKey = expr.getVarName();
 			if(expr.isFunction()) {
-				SparqlExtendExprVisitor v = new SparqlExtendExprVisitor();
-				v.setMapping(varMapping);
-				ExprWalker.walk(v,expr);
-				v.finishVisit();
-				aliases.put(var.getName(), v.getExpression());
+				for(Map<String,String> varMapping:varMappings) {
+					SparqlExtendExprVisitor v = new SparqlExtendExprVisitor();
+					v.setMapping(varMapping);
+					ExprWalker.walk(v,expr);
+					v.finishVisit();
+					aliases.put(var.getName(), v.getExpression());
+				}
 			}
 			if(aliases.containsKey(originalKey)) {
 				String val = aliases.remove(originalKey);
 				aliases.put(var.getName(), val);
 			} 
-			if(varMapping.containsKey(originalKey)) {
-				// do not remove but just get for the case where there is extend and filter: e.g.
-				//				(project (?roomName ?totalMotion)
-				//						  (filter (> ?.0 0)
-				//						    (extend ((?totalMotion ?.0))
-				//						      (extend ((?roomName ?sensor))
-				//						        (group (?sensor) ((?.0 (sum ?motionOrNoMotion)))
-				String val = varMapping.get(originalKey); 
-				varMapping.put(var.getName(), val);
+			for(Map<String,String> varMapping:varMappings) {
+				if(varMapping.containsKey(originalKey)) {
+					// do not remove but just get for the case where there is extend and filter: e.g.
+					//				(project (?roomName ?totalMotion)
+					//						  (filter (> ?.0 0)
+					//						    (extend ((?totalMotion ?.0))
+					//						      (extend ((?roomName ?sensor))
+					//						        (group (?sensor) ((?.0 (sum ?motionOrNoMotion)))
+					String val = varMapping.get(originalKey); 
+					varMapping.put(var.getName(), val);
+				}
 			}
 		}
 	}
@@ -310,13 +344,27 @@ public class SparqlOpVisitor implements OpVisitor {
 							}
 						}
 					}
-//					System.out.println(discardRow);
+					
 					if(!discardRow) {
-						AddVarMappings(right);
+						for(Map<String,String> varMapping:varMappings) {
+							varMapping.putAll(right.getVarMapping());
+						}
 					}
+					
+					RemoveVarMappings(right);
 				}
 			}
 		}
+	}
+
+	private void RemoveVarMappings(Result mapping) {
+		for (Iterator<Map<String, String>> iterator = varMappings.iterator(); iterator.hasNext();) {
+			Map<String, String> element = iterator.next();
+		    if (element.equals(mapping.getVarMapping())) {
+		        iterator.remove();
+		    }
+		}
+		
 	}
 
 	public void visit(OpUnion arg0) {
@@ -332,11 +380,18 @@ public class SparqlOpVisitor implements OpVisitor {
 			}
 		}
 		if(hasResults.get(index)) {
-			String unionStr = "SELECT * FROM ";
-			for(String tables:tableList)
-				unionStr += tables + " ";
-			unionStr += " WHERE "+filterList.get(whereIndex);
+			List<String> filterStrs = filterList.get(whereIndex);
+			int count = 0;
+			String unionStr = "";
+			for(String filterStr:filterStrs) {
+				if(count++>0) unionStr += " UNION ";
+				unionStr += "SELECT * FROM ";
+				for(String tables:tableList)
+					unionStr += tables + " ";
+				unionStr += " WHERE "+filterStr;
+			}
 			unionList.add(unionStr);
+			unionStarted = false;
 //			System.out.println(unionStr);
 		}
 		filterList.clear();
@@ -383,118 +438,101 @@ public class SparqlOpVisitor implements OpVisitor {
 	}
 
 	public void visit(OpProject arg0) {
-		
-		//build filters
-		for(String filterStr:filterList) {
-			if(!filterStr.trim().equals("")) {
-				String modifier = "";
-				if(!whereClause.equals("WHERE ")) {
-					modifier = " AND ";
+		int varMappingCount = 0;
+		Set<String> preventDuplicates = new HashSet<String>(); //to prevent duplicate var names in the case of non unions at this level
+		for(Map<String,String> varMapping:varMappings) {
+			//build filters
+			for(List<String> filterStrs:filterList) {
+				String filterStr = filterStrs.get(varMappingCount);
+				if(!filterStr.trim().equals("")) {
+					String modifier = "";
+					if(!whereClause.equals("WHERE ")) {
+						modifier = " AND ";
+					}
+					whereClause += modifier + filterStr;
 				}
-				whereClause += modifier + filterStr;
 			}
-		}
-		filterList.clear();
-		
-//		if(tableList.size()>1) { 
-//			Map<String, Set<String>> joinMap = new HashMap<String,Set<String>>();
-//			for(List<SelectedNode> selN:allSelectedNodes) {
-//				for(SelectedNode node:selN) {
-//					if(node.isLeafMap()) {
-//						String var = node.getVar();
-//						Set<String> cols = joinMap.get(var);
-//						if(cols==null) {
-//							cols = new HashSet<String>();
-//						}
-//						cols.add(node.getTable()+"."+node.getColumn());
-//						joinMap.put(var, cols);
-//					}
-//					if(node.isSubjectLeafMap()) {
-//						String var = node.getSubjectVar();
-//						Set<String> cols = joinMap.get(var);
-//						if(cols==null) {
-//							cols = new HashSet<String>();
-//						}
-//						cols.add(node.getSubjectTable()+"."+node.getSubjectColumn());
-//						joinMap.put(var, cols);
-//					}
-//				}
-//			}
-//			
-//			String joinExpression = "";
-//			for(Entry<String,Set<String>> joinItem:joinMap.entrySet()) {
-//				if(joinItem.getValue().size()>1) {
-//					int count = 0;
-//					for(String column:joinItem.getValue()) {
-//						if(count++>0) {
-//							joinExpression += "=";
-//						}
-//						joinExpression += column;
-//					}
-//				}
-//			}
-//			if(!whereClause.trim().equals("WHERE") && !joinExpression.trim().equals(""))
-//				whereClause += " AND ";
-//			whereClause += " " + joinExpression + " ";
-//		}
-//		allSelectedNodes.clear(); //clear the selected node list from any bgps below this projection
+			filterList.clear();
+			varMappingCount++;
 			
-		int count=0;
-		for(Var var:arg0.getVars()) {
-			if(count++>0) {
-				selectClause += " , ";
-//				projections += " , ";
-			}
-			if(aliases.containsKey(var.getName())) {
-				String colName = aliases.remove(var.getName());
-				selectClause += colName + " AS " + var.getName();
-//				projections += var.getName();
-			} else if(varMapping.containsKey(var.getName())){
-				String rdmsName = varMapping.remove(var.getName());
-				selectClause += rdmsName;
-				if(!rdmsName.equals(var.getName())) {
-					selectClause += " AS " + var.getName();
+			int count=0;
+			for(Var var:arg0.getVars()) {
+				if(count++>0) {
+					selectClause += " , ";
+	//				projections += " , ";
 				}
-//				FormatUtil.processTableName(rdmsName);
-				//TODO:take care of NULL
-				varMapping.put(var.getName(), var.getName());
-//				projections += var.getName();
-			} else {
-				selectClause += var.getName();
-//				projections += var.getName();
-//				count--;
+				if(!preventDuplicates.contains(var.getName())) { 
+					if(aliases.containsKey(var.getName())) {
+						String colName = aliases.remove(var.getName());
+						selectClause += colName + " AS " + var.getName();
+		//				projections += var.getName();
+					} else if(varMapping.containsKey(var.getName())){
+						String rdmsName = varMapping.remove(var.getName());
+						selectClause += rdmsName;
+						if(!rdmsName.equals(var.getName())) {
+							selectClause += " AS " + var.getName();
+						}
+		//				FormatUtil.processTableName(rdmsName);
+						//TODO:take care of NULL
+						varMapping.put(var.getName(), var.getName());
+		//				projections += var.getName();
+					} else {
+						selectClause += var.getName();
+		//				projections += var.getName();
+		//				count--;
+					}
+					preventDuplicates.add(var.getName());
+				}
+			}
+	//		System.out.println(selectClause);
+			
+			count = 0; //add from tables
+			for(String table:tableList) {
+				if(count++>0) {
+					fromClause += " , ";
+				}
+				if(tableToSyntax.containsKey(table)) {
+					fromClause += table + tableToSyntax.get(table);
+				} else {
+					fromClause += table;
+				}
+			}
+			tableList.clear();
+			
+			//has union
+			if(!unionList.isEmpty()) {
+				String unionStr = "";
+				for(String union:unionList) {
+					String modifier = "";
+					if(!unionStr.equals(""))
+						modifier = " UNION ";
+					unionStr += modifier + union;
+				}
+//				System.out.println(unionStr);
+	 			fromClause = "FROM (" + unionStr + ") ";
+			}
+			
+			if(unionStarted==true) {
+//				System.out.println(formatSQL());
+				unionSelects.add(formatSQL());
+				//clear clauses
+				selectClause = "SELECT ";
+				preventDuplicates.clear();
 			}
 		}
+		
+		String unionStr = "";
+		for(String unionPart:unionSelects) {
+			if(!unionStr.equals("")) 
+				unionStr += " UNION ";
+			unionStr += unionPart;
+		}
+		if(!unionStr.equals(""))
+			previousSelects.add(unionStr);
+		unionStarted=false;
+		
 //		System.out.println(selectClause);
-		
-		count = 0; //add from tables
-		for(String table:tableList) {
-			if(count++>0) {
-				fromClause += " , ";
-			}
-			if(tableToSyntax.containsKey(table)) {
-				fromClause += table + tableToSyntax.get(table);
-			} else {
-				fromClause += table;
-			}
-		}
-		tableList.clear();
-		
-		//has union
-		if(!unionList.isEmpty()) {
-			String unionStr = "";
-			for(String union:unionList) {
-				String modifier = "";
-				if(!unionStr.equals(""))
-					modifier = " UNION ";
-				unionStr += modifier + union;
-			}
-//			System.out.println(unionStr);
- 			fromClause = "FROM (" + unionStr + ") ";
-		}
-		
-//		System.out.println(selectClause);
-//		previousSelect = formatSQL();
+		//		previousSelect = formatSQL();
 		if(bgpStarted==true) {
 			previousSelects.add(formatSQL());
 		} else {
@@ -507,6 +545,7 @@ public class SparqlOpVisitor implements OpVisitor {
 			previousSelects.clear();
 			previousSelects.add(formatSQL());
 		}
+		
 		
 		//clear clauses
 		selectClause = "SELECT ";
@@ -541,28 +580,32 @@ public class SparqlOpVisitor implements OpVisitor {
 		Map<Var,Expr> exprMap = vars.getExprs();
 		int count = 0;
 		for(Var var:vars.getVars()) {
-			Expr expr = exprMap.get(var);
-			SparqlGroupExprVisitor v = new SparqlGroupExprVisitor();
-			v.setMapping(varMapping);
-			ExprWalker.walk(v, expr);
-			if(count++>0) {
-				groupClause += " , ";
+			for(Map<String,String> varMapping:varMappings) {
+				Expr expr = exprMap.get(var);
+				SparqlGroupExprVisitor v = new SparqlGroupExprVisitor();
+				v.setMapping(varMapping);
+				ExprWalker.walk(v, expr);
+				if(count++>0) {
+					groupClause += " , ";
+				}
+				if(!v.getExpression().equals("")) {
+					groupClause += v.getExpression();
+					varMapping.put(var.getName(), v.getExpression());
+	//				aliases.put(var.getName(), v.getExpression());
+				} else {
+					groupClause += FormatUtil.mapVar(var.getName(),varMapping);
+				} 
 			}
-			if(!v.getExpression().equals("")) {
-				groupClause += v.getExpression();
-				varMapping.put(var.getName(), v.getExpression());
-//				aliases.put(var.getName(), v.getExpression());
-			} else {
-				groupClause += FormatUtil.mapVar(var.getName(),varMapping);
-			} 
 		}
 //		System.out.println("group:"+groupClause);
-		for(ExprAggregator agg:group.getAggregators()) {
-			SparqlGroupExprVisitor v = new SparqlGroupExprVisitor();
-			v.setMapping(varMapping);
-			ExprWalker.walk(v, agg);
-			varMapping.put(v.getAggKey(),v.getAggVal());
-//			aliases.put(v.getAggKey(),v.getAggVal());
+		for(Map<String,String> varMapping:varMappings) {
+			for(ExprAggregator agg:group.getAggregators()) {
+				SparqlGroupExprVisitor v = new SparqlGroupExprVisitor();
+				v.setMapping(varMapping);
+				ExprWalker.walk(v, agg);
+				varMapping.put(v.getAggKey(),v.getAggVal());
+	//			aliases.put(v.getAggKey(),v.getAggVal());
+			}
 		}
 	}
 

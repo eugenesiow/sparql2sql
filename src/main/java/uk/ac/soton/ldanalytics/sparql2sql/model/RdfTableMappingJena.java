@@ -103,7 +103,7 @@ public class RdfTableMappingJena implements RdfTableMapping {
 				Var currentV = v.next();
 				Node val = b.get(currentV);
 				if(currentV.toString().contains("_info_")) {
-					String[] parts = val.getLiteralValue().toString().split("=");
+					String[] parts = val.getLiteral().getLexicalForm().toString().split("=");
 					if(parts.length>1) {
 						for(int i=0;i<parts.length;i++) {
 							String[] subParts = parts[i].split("\\.");
@@ -113,10 +113,10 @@ public class RdfTableMappingJena implements RdfTableMapping {
 							}
 						}
 					}
-					result.addWhere(val.getLiteralValue().toString());
+					result.addWhere(val.getLiteral().getLexicalForm());
 				} else {
 					if(val.isLiteral()) {
-						String value = val.getLiteralValue().toString();
+						String value = val.getLiteral().getLexicalForm();
 						String datatype = val.getLiteralDatatypeURI();
 						if(datatype.equals(S2SML.LITERAL_MAP_IRI)) {
 							String[] parts = value.split("\\.");

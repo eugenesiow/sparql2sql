@@ -33,4 +33,8 @@ public class Result {
 	public String getWhere() {
 		return whereClause;
 	}
+	
+	public String toString() {
+		return varMapping.toString();
+	}
 }

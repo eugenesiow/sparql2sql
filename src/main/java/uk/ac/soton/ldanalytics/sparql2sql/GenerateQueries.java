@@ -141,7 +141,7 @@ public class GenerateQueries {
 		} catch (ParseException | IOException e) {
 			System.err.println(e.getMessage());
 			HelpFormatter formatter = new HelpFormatter();
-			formatter.printHelp( "LSDTransform", options, true );
+			formatter.printHelp( "GenerateQueries", options, true );
 		}
 	}
 }
