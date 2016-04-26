@@ -175,19 +175,33 @@ public class test {
 //				"HAVING ( AVG(?temperature) < \"32\"^^xsd:float  &&  MIN(?windSpeed) > \"40.0\"^^xsd:float ) ";
 		
 		String queryStr = "PREFIX om-owl: <http://knoesis.wright.edu/ssw/ont/sensor-observation.owl#>\n" + 
-				"PREFIX weather: <http://knoesis.wright.edu/ssw/ont/weather.owl#>\n" + 
 				"PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>\n" + 
 				"PREFIX owl-time: <http://www.w3.org/2006/time#>\n" + 
 				"\n" + 
-				"SELECT ?sensor WHERE {\n" + 
-				"	?observation om-owl:procedure ?sensor ;\n" + 
-				"	           om-owl:observedProperty weather:_WindSpeed ;\n" + 
-				"	           om-owl:result [ om-owl:floatValue ?value ] ;\n" + 
-				"	           om-owl:samplingTime ?instant .\n" + 
+				"SELECT ?sensor\n" + 
+				"WHERE {\n" + 
+				"	?sensor om-owl:generatedObservation ?observation.\n" + 
+				"	?observation om-owl:samplingTime ?instant .\n" + 
 				"	?instant owl-time:inXSDDateTime ?time .\n" + 
 				"	FILTER (?time>\"2003-04-01T00:00:00\"^^xsd:dateTime && ?time<\"2003-04-01T01:00:00\"^^xsd:dateTime)\n" + 
-				"} GROUP BY ?sensor\n" + 
-				"HAVING ( AVG(?value) >= \"74\"^^xsd:float )";
+				"}\n" + 
+				"GROUP BY ?sensor\n" + 
+				"HAVING (count(?time) = 0)";
+		
+//		String queryStr = "PREFIX om-owl: <http://knoesis.wright.edu/ssw/ont/sensor-observation.owl#>\n" + 
+//				"PREFIX weather: <http://knoesis.wright.edu/ssw/ont/weather.owl#>\n" + 
+//				"PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>\n" + 
+//				"PREFIX owl-time: <http://www.w3.org/2006/time#>\n" + 
+//				"\n" + 
+//				"SELECT ?sensor WHERE {\n" + 
+//				"	?observation om-owl:procedure ?sensor ;\n" + 
+//				"	           om-owl:observedProperty weather:_WindSpeed ;\n" + 
+//				"	           om-owl:result [ om-owl:floatValue ?value ] ;\n" + 
+//				"	           om-owl:samplingTime ?instant .\n" + 
+//				"	?instant owl-time:inXSDDateTime ?time .\n" + 
+//				"	FILTER (?time>\"2003-04-01T00:00:00\"^^xsd:dateTime && ?time<\"2003-04-01T01:00:00\"^^xsd:dateTime)\n" + 
+//				"} GROUP BY ?sensor\n" + 
+//				"HAVING ( AVG(?value) >= \"74\"^^xsd:float )";
 		
 //		String queryStr = "PREFIX om-owl: <http://knoesis.wright.edu/ssw/ont/sensor-observation.owl#>\n" + 
 //				"PREFIX weather: <http://knoesis.wright.edu/ssw/ont/weather.owl#>\n" + 
