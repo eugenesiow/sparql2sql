@@ -65,12 +65,14 @@ public class SparqlOpVisitor implements OpVisitor {
 	Map<String,String> aliases = new HashMap<String,String>();
 	Set<String> tableList = new HashSet<String>();
 	List<String> previousSelects = new ArrayList<String>();
-	List<String> unionSelects = new ArrayList<String>();
+	Set<String> unionSelects = new HashSet<String>();
 	List<List<String>> filterList = new ArrayList<List<String>>();
 	List<String> unionList = new ArrayList<String>();
 	List<Boolean> hasResults = new ArrayList<Boolean>();
 	Map<String,String> uriToSyntax = new HashMap<String,String>();	
 	Map<String,String> tableToSyntax = new HashMap<String,String>();
+	List<Set<String>> groupLists = new ArrayList<Set<String>>();
+	List<Set<String>> havingLists = new ArrayList<Set<String>>();
 	
 	String selectClause = "SELECT ";
 	String fromClause = "FROM ";
@@ -234,6 +236,7 @@ public class SparqlOpVisitor implements OpVisitor {
 		
 		List<String> filterStrs = new ArrayList<String>();
 		for(Map<String,String> varMapping:varMappings) {
+			Set<String> havingList = new HashSet<String>();
 			String filterStr = "";
 			for(Expr filter:filters.getExprs().getList()) {
 				SparqlFilterExprVisitor v = new SparqlFilterExprVisitor();
@@ -251,12 +254,16 @@ public class SparqlOpVisitor implements OpVisitor {
 					filterStr += modifier + v.getExpression();
 	//				whereClause += modifier + v.getExpression();
 				} else if(!v.getHavingExpression().equals("")) {
-					if(!havingClause.equals("HAVING ")) {
-						modifier = " AND ";
-					}
-					havingClause += modifier + v.getHavingExpression();
+//					if(!havingClause.equals("HAVING ")) {
+//						modifier = " AND ";
+//					}
+//					havingClause += modifier + v.getHavingExpression();
+					havingList.add(v.getHavingExpression());
 				}
 			}
+//			System.out.println(havingList.size() + varMapping.toString());
+			if(havingList.size()>0)
+				havingLists.add(havingList);
 			filterStrs.add(filterStr);
 		}
 		filterList.add(filterStrs);
@@ -453,7 +460,6 @@ public class SparqlOpVisitor implements OpVisitor {
 				}
 			}
 			filterList.clear();
-			varMappingCount++;
 			
 			int count=0;
 			for(Var var:arg0.getVars()) {
@@ -514,11 +520,13 @@ public class SparqlOpVisitor implements OpVisitor {
 			
 			if(unionStarted==true) {
 //				System.out.println(formatSQL());
-				unionSelects.add(formatSQL());
+				unionSelects.add(formatSQL(varMappingCount));
 				//clear clauses
 				selectClause = "SELECT ";
 				preventDuplicates.clear();
 			}
+			
+			varMappingCount++;
 		}
 		
 		String unionStr = "";
@@ -578,24 +586,28 @@ public class SparqlOpVisitor implements OpVisitor {
 //		System.out.println("group");
 		VarExprList vars = group.getGroupVars();
 		Map<Var,Expr> exprMap = vars.getExprs();
-		int count = 0;
-		for(Var var:vars.getVars()) {
-			for(Map<String,String> varMapping:varMappings) {
+//		int count = 0;
+		for(Map<String,String> varMapping:varMappings) {
+			Set<String> groupList = new HashSet<String>();
+			for(Var var:vars.getVars()) {			
 				Expr expr = exprMap.get(var);
 				SparqlGroupExprVisitor v = new SparqlGroupExprVisitor();
 				v.setMapping(varMapping);
 				ExprWalker.walk(v, expr);
-				if(count++>0) {
-					groupClause += " , ";
-				}
+//				if(count++>0) {
+//					groupClause += " , ";
+//				}
 				if(!v.getExpression().equals("")) {
-					groupClause += v.getExpression();
+					groupList.add(v.getExpression());
+//					groupClause += v.getExpression();
 					varMapping.put(var.getName(), v.getExpression());
 	//				aliases.put(var.getName(), v.getExpression());
 				} else {
-					groupClause += FormatUtil.mapVar(var.getName(),varMapping);
+					groupList.add(FormatUtil.mapVar(var.getName(),varMapping));
+//					groupClause += FormatUtil.mapVar(var.getName(),varMapping);
 				} 
 			}
+			groupLists.add(groupList);
 		}
 //		System.out.println("group:"+groupClause);
 		for(Map<String,String> varMapping:varMappings) {
@@ -612,6 +624,30 @@ public class SparqlOpVisitor implements OpVisitor {
 	public void visit(OpTopN arg0) {
 		
 		
+	}
+	
+	private String formatSQL(int index) {
+		if(groupLists.size()>index) {
+			Set<String> groupList = groupLists.get(index);
+			int count=0;
+			for(String expr:groupList) {
+				if(count++>0)
+					groupClause += " , ";
+				groupClause += expr;
+			}
+		}
+		groupLists.clear();
+		if(havingLists.size()>index) {
+			Set<String> havingList = havingLists.get(index);
+			int count=0;
+			for(String expr:havingList) {
+				if(count++>0)
+					havingClause += " AND ";
+				havingClause += expr;
+			}
+		}
+		havingLists.clear();
+		return formatSQL();
 	}
 	
 	private String formatSQL() {		
