@@ -155,6 +155,10 @@ public class SparqlOpVisitor implements OpVisitor {
 		return hasResults;
 	}
 	
+	/**
+	 * Adds a Result object to the varMapping list
+	 * @param rs
+	 */
 	private void AddVarMappings(Result rs) {
 		Map<String,String> varMapping = new HashMap<String,String> ();
 		varMapping.putAll(rs.getVarMapping());
@@ -166,6 +170,11 @@ public class SparqlOpVisitor implements OpVisitor {
 		whereClause += rs.getWhere();
 	}
 
+	/**
+	 * Helper function to convert a Jena Node object to a string
+	 * @param node Jena node object
+	 * @return string of the nodes value
+	 */
 	private String nodeToString(Node node) {
 		if(node.isURI()) {
 			return "<"+node.toString()+">";
@@ -364,6 +373,10 @@ public class SparqlOpVisitor implements OpVisitor {
 		}
 	}
 
+	/**
+	 * Removes the indicated Result object from the list of varMappings
+	 * @param mapping
+	 */
 	private void RemoveVarMappings(Result mapping) {
 		for (Iterator<Map<String, String>> iterator = varMappings.iterator(); iterator.hasNext();) {
 			Map<String, String> element = iterator.next();
@@ -535,14 +548,17 @@ public class SparqlOpVisitor implements OpVisitor {
 				unionStr += " UNION ";
 			unionStr += unionPart;
 		}
-		if(!unionStr.equals(""))
+		if(!unionStr.equals("")) {
 			previousSelects.add(unionStr);
+		}
 		unionStarted=false;
 		
 //		System.out.println(selectClause);
 		//		previousSelect = formatSQL();
 		if(bgpStarted==true) {
-			previousSelects.add(formatSQL());
+			String sql = formatSQL(0);
+			if(!sql.trim().equals(""))
+				previousSelects.add(sql);
 		} else {
 			for(String sel:previousSelects) {
 				if(!fromClause.trim().equals("FROM")) {
@@ -551,7 +567,9 @@ public class SparqlOpVisitor implements OpVisitor {
 				fromClause += " (" + sel + ") ";
 			}
 			previousSelects.clear();
-			previousSelects.add(formatSQL());
+			String sql = formatSQL(0);
+			if(!sql.trim().equals(""))
+				previousSelects.add(sql);
 		}
 		
 		
@@ -626,6 +644,13 @@ public class SparqlOpVisitor implements OpVisitor {
 		
 	}
 	
+	/**
+	 * Produces an SQL query from current clauses by producing the group and having clauses and calling the base function.
+	 * If cardinality of the sigma function (BGP resolution function) is more than 1, a UNION needs to be done and each formatSQL(index) produces a query to be UNION-ed together
+	 * The index identifies which of the results from the sigma function this query should build upon
+	 * @param index Integer indicating the index within each of the list of sets
+	 * @return String containing the SQL query produced, this might be a partial query (e.g. a UNION or nested part of query)
+	 */
 	private String formatSQL(int index) {
 		if(groupLists.size()>index) {
 			Set<String> groupList = groupLists.get(index);
@@ -635,8 +660,8 @@ public class SparqlOpVisitor implements OpVisitor {
 					groupClause += " , ";
 				groupClause += expr;
 			}
+			groupLists.clear();
 		}
-		groupLists.clear();
 		if(havingLists.size()>index) {
 			Set<String> havingList = havingLists.get(index);
 			int count=0;
@@ -645,11 +670,15 @@ public class SparqlOpVisitor implements OpVisitor {
 					havingClause += " AND ";
 				havingClause += expr;
 			}
+			havingLists.clear();
 		}
-		havingLists.clear();
 		return formatSQL();
 	}
 	
+	/**
+	 * Base function that produces an SQL query from the current clauses (e.g. select, where, group by, etc. clauses)
+	 * @return String containing the SQL query produced, this might be a partial query (e.g. a UNION or nested part of query)
+	 */
 	private String formatSQL() {		
 		if(selectClause.trim().equals("SELECT")) {
 			return "";
@@ -686,13 +715,21 @@ public class SparqlOpVisitor implements OpVisitor {
 				havingClause + " ";
 	}
 	
+	/**
+	 * Returns the final translated SQL statement
+	 * @return the translated SQL statement as a string
+	 */
 	public String getSQL() {
 		if(previousSelects.size()>0) {
 			return previousSelects.get(0);
 		}
-		return null;
+		return "";
 	}
 
+	/**
+	 * Set any named graphs and streaming named graphs with window properties
+	 * @param namedGraphURIs list of URIs of named graphs and for streaming named graphs, metadata information appended at the end
+	 */
 	public void setNamedGraphs(List<String> namedGraphURIs) {
 		for(String graphUri:namedGraphURIs) {
 			dialect = "ESPER";
@@ -719,6 +756,10 @@ public class SparqlOpVisitor implements OpVisitor {
 		}
 	}
 
+	/**
+	 * Sets a catalogue of streams to map uris to actual stream names/identifiers
+	 * @param streamCatalog Map containing (streamName,uri)
+	 */
 	public void setStreamCatalog(Map<String, String> streamCatalog) {
 		for(Entry<String,String> stream:streamCatalog.entrySet()) {
 			if(uriToSyntax.containsKey(stream.getValue())) {
