@@ -1,7 +1,6 @@
 package uk.ac.soton.ldanalytics.sparql2sql.util;
 
 import java.io.BufferedReader;
-
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -32,6 +31,8 @@ public class FormatUtil {
 			return "'" + node.getString() + "'";
 		}		
 	}
+	
+
 
 	public static String processExprType(Expr expr, Map<String, String> varMapping) {
 		String expression = "";
@@ -234,6 +235,14 @@ public class FormatUtil {
 		}
 		
 		return catalog;
+	}
+
+
+
+	public static boolean isConstant(String expr) {
+		if(expr.startsWith("'") && expr.endsWith("'"))
+			return true;
+		return false;
 	}
 	
 	

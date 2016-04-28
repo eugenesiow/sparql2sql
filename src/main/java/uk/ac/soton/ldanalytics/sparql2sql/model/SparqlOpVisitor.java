@@ -73,6 +73,7 @@ public class SparqlOpVisitor implements OpVisitor {
 	Map<String,String> tableToSyntax = new HashMap<String,String>();
 	List<Set<String>> groupLists = new ArrayList<Set<String>>();
 	List<Set<String>> havingLists = new ArrayList<Set<String>>();
+	int globalVarMappingCount = 0;
 	
 	String selectClause = "SELECT ";
 	String fromClause = "FROM ";
@@ -142,6 +143,7 @@ public class SparqlOpVisitor implements OpVisitor {
 		List<Result> bindingSet = new ArrayList<Result>();
 		int size = 0;
 		for(Result result:results.getResults()) {
+//			System.out.println(result);
 			hasResults = true;
 			bindingSet.add(result);
 			AddVarMappings(result);
@@ -313,7 +315,8 @@ public class SparqlOpVisitor implements OpVisitor {
 			Expr expr = vars.getExpr(var);
 			String originalKey = expr.getVarName();
 			if(expr.isFunction()) {
-				for(Map<String,String> varMapping:varMappings) {
+				for(int i=globalVarMappingCount;i<varMappings.size();i++) {
+					Map<String,String> varMapping = varMappings.get(i);
 					SparqlExtendExprVisitor v = new SparqlExtendExprVisitor();
 					v.setMapping(varMapping);
 					ExprWalker.walk(v,expr);
@@ -325,7 +328,8 @@ public class SparqlOpVisitor implements OpVisitor {
 				String val = aliases.remove(originalKey);
 				aliases.put(var.getName(), val);
 			} 
-			for(Map<String,String> varMapping:varMappings) {
+			for(int i=globalVarMappingCount;i<varMappings.size();i++) {
+				Map<String,String> varMapping = varMappings.get(i);
 				if(varMapping.containsKey(originalKey)) {
 					// do not remove but just get for the case where there is extend and filter: e.g.
 					//				(project (?roomName ?totalMotion)
@@ -459,8 +463,9 @@ public class SparqlOpVisitor implements OpVisitor {
 
 	public void visit(OpProject arg0) {
 		int varMappingCount = 0;
-		Set<String> preventDuplicates = new HashSet<String>(); //to prevent duplicate var names in the case of non unions at this level
+		Map<String,String> preventDuplicates = new HashMap<String,String>(); //to prevent duplicate var names in the case of non unions at this level
 		for(Map<String,String> varMapping:varMappings) {
+			globalVarMappingCount++;
 			//build filters
 			for(List<String> filterStrs:filterList) {
 				String filterStr = filterStrs.get(varMappingCount);
@@ -475,32 +480,44 @@ public class SparqlOpVisitor implements OpVisitor {
 			filterList.clear();
 			
 			int count=0;
+
 			for(Var var:arg0.getVars()) {
+//				System.out.println(var + ":" + selectClause + ":" + varMapping);
 				if(count++>0) {
 					selectClause += " , ";
 	//				projections += " , ";
 				}
-				if(!preventDuplicates.contains(var.getName())) { 
-					if(aliases.containsKey(var.getName())) {
-						String colName = aliases.remove(var.getName());
-						selectClause += colName + " AS " + var.getName();
-		//				projections += var.getName();
-					} else if(varMapping.containsKey(var.getName())){
-						String rdmsName = varMapping.remove(var.getName());
-						selectClause += rdmsName;
-						if(!rdmsName.equals(var.getName())) {
-							selectClause += " AS " + var.getName();
-						}
-		//				FormatUtil.processTableName(rdmsName);
-						//TODO:take care of NULL
-						varMapping.put(var.getName(), var.getName());
-		//				projections += var.getName();
-					} else {
-						selectClause += var.getName();
-		//				projections += var.getName();
-		//				count--;
+				String selectAddition = "";
+				if(aliases.containsKey(var.getName())) {
+					String colName = aliases.remove(var.getName());
+					selectAddition += colName + " AS " + var.getName();
+	//				projections += var.getName();
+				} else if(varMapping.containsKey(var.getName())){
+					String rdmsName = varMapping.remove(var.getName());
+					selectAddition += rdmsName;
+					if(!rdmsName.equals(var.getName())) {
+						selectAddition += " AS " + var.getName();
 					}
-					preventDuplicates.add(var.getName());
+	//				FormatUtil.processTableName(rdmsName);
+					//TODO:take care of NULL
+					varMapping.put(var.getName(), var.getName());
+	//				projections += var.getName();
+				} else {
+					selectAddition += var.getName();
+	//				projections += var.getName();
+	//				count--;
+				}
+				
+				if(!preventDuplicates.containsKey(var.getName())) {
+					selectClause += selectAddition;
+				} else {
+//					System.out.println(var.getName() + ":" + selectAddition + ":" + preventDuplicates.get(var.getName()));
+					selectClause = selectClause.replace(preventDuplicates.get(var.getName()), selectAddition);
+				}
+				preventDuplicates.put(var.getName(),selectAddition);
+				
+				if(selectClause.trim().endsWith(",")) { //remove extra commas at the end
+					selectClause = selectClause.trim().substring(0, selectClause.trim().length()-1);
 				}
 			}
 	//		System.out.println(selectClause);
@@ -601,34 +618,27 @@ public class SparqlOpVisitor implements OpVisitor {
 	}
 
 	public void visit(OpGroup group) {
-//		System.out.println("group");
 		VarExprList vars = group.getGroupVars();
 		Map<Var,Expr> exprMap = vars.getExprs();
-//		int count = 0;
-		for(Map<String,String> varMapping:varMappings) {
+		for(int i=globalVarMappingCount;i<varMappings.size();i++) {
+			Map<String,String> varMapping = varMappings.get(i);
 			Set<String> groupList = new HashSet<String>();
 			for(Var var:vars.getVars()) {			
 				Expr expr = exprMap.get(var);
 				SparqlGroupExprVisitor v = new SparqlGroupExprVisitor();
 				v.setMapping(varMapping);
 				ExprWalker.walk(v, expr);
-//				if(count++>0) {
-//					groupClause += " , ";
-//				}
 				if(!v.getExpression().equals("")) {
 					groupList.add(v.getExpression());
-//					groupClause += v.getExpression();
 					varMapping.put(var.getName(), v.getExpression());
-	//				aliases.put(var.getName(), v.getExpression());
 				} else {
 					groupList.add(FormatUtil.mapVar(var.getName(),varMapping));
-//					groupClause += FormatUtil.mapVar(var.getName(),varMapping);
 				} 
 			}
 			groupLists.add(groupList);
 		}
-//		System.out.println("group:"+groupClause);
-		for(Map<String,String> varMapping:varMappings) {
+		for(int i=globalVarMappingCount;i<varMappings.size();i++) {
+			Map<String,String> varMapping = varMappings.get(i);
 			for(ExprAggregator agg:group.getAggregators()) {
 				SparqlGroupExprVisitor v = new SparqlGroupExprVisitor();
 				v.setMapping(varMapping);
@@ -658,7 +668,9 @@ public class SparqlOpVisitor implements OpVisitor {
 			for(String expr:groupList) {
 				if(count++>0)
 					groupClause += " , ";
-				groupClause += expr;
+				//SQO: dont add constants to group by
+				if(!FormatUtil.isConstant(expr))
+					groupClause += expr;
 			}
 			groupLists.clear();
 		}
