@@ -73,7 +73,7 @@ public class SparqlOpVisitor implements OpVisitor {
 	Map<String,String> tableToSyntax = new HashMap<String,String>();
 	List<Set<String>> groupLists = new ArrayList<Set<String>>();
 	List<Set<String>> havingLists = new ArrayList<Set<String>>();
-	int globalVarMappingCount = 0;
+	int globalVarMappingCount = -1;
 	
 	String selectClause = "SELECT ";
 	String fromClause = "FROM ";
@@ -107,6 +107,7 @@ public class SparqlOpVisitor implements OpVisitor {
 	 * BGP Resolution visitor
 	 */
 	public void visit(OpBGP bgp) {
+		globalVarMappingCount++;
 		bgpStarted = true;
 		
 		List<Triple> patterns = bgp.getPattern().getList();	
@@ -465,7 +466,6 @@ public class SparqlOpVisitor implements OpVisitor {
 		int varMappingCount = 0;
 		Map<String,String> preventDuplicates = new HashMap<String,String>(); //to prevent duplicate var names in the case of non unions at this level
 		for(Map<String,String> varMapping:varMappings) {
-			globalVarMappingCount++;
 			//build filters
 			for(List<String> filterStrs:filterList) {
 				String filterStr = filterStrs.get(varMappingCount);
