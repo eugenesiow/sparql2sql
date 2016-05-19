@@ -63,32 +63,32 @@ public class test {
 //				"  FILTER (?date > \"2012-07-01T00:00:00\"^^xsd:dateTime && ?date < \"2012-07-30T00:00:00\"^^xsd:dateTime)\n" + 
 //				"} GROUP BY (day(xsd:dateTime(?date)) as ?day)";
 		
-		String queryStr = "PREFIX  xsd:  <http://www.w3.org/2001/XMLSchema#>\n" + 
-				"PREFIX  iotsn: <http://iot.soton.ac.uk/smarthome/sensor#>\n" + 
-				"PREFIX  time: <http://www.w3.org/2006/time#>\n" + 
-				"PREFIX  ssn:  <http://purl.oclc.org/NET/ssnx/ssn#>\n" + 
-				"PREFIX  iot:  <http://purl.oclc.org/NET/iot#>\n" + 
-				"\n" + 
-				"SELECT ?platform ?dateOnly (sum(?power) as ?totalpower)\n" + 
-				"WHERE\n" + 
-				"{\n" + 
-				"{\n" + 
-				"  SELECT ?platform ?hours ?dateOnly (avg(?meterval) as ?power)\n" + 
-				"  WHERE\n" + 
-				"  {\n" + 
-				"    ?meter ssn:onPlatform ?platform.\n" + 
-				"    ?meterobs ssn:observedBy ?meter.\n" + 
-				"    ?meterobs ssn:observationSamplingTime ?meterinstant;\n" + 
-				"      ssn:observationResult ?metersnout.\n" + 
-				"    ?meterinstant time:inXSDDateTime ?meterdate.\n" + 
-				"    ?metersnout ssn:hasValue ?meterobsval.\n" + 
-				"    ?meterobsval a iot:EnergyValue.\n" + 
-				"    ?meterobsval iot:hasQuantityValue ?meterval.\n" + 
-				"    FILTER(?meterval > 0)\n" + 
-				"    FILTER (?meterdate > \"2012-07-01T00:00:00\"^^xsd:dateTime && ?meterdate < \"2012-07-02T00:00:00\"^^xsd:dateTime)\n" + 
-				"  } GROUP BY ?platform ?meter (hours(?meterdate) as ?hours) (xsd:date(?meterdate) as ?dateOnly)\n" + 
-				"}\n" + 
-				"} GROUP BY ?platform ?dateOnly";
+//		String queryStr = "PREFIX  xsd:  <http://www.w3.org/2001/XMLSchema#>\n" + 
+//				"PREFIX  iotsn: <http://iot.soton.ac.uk/smarthome/sensor#>\n" + 
+//				"PREFIX  time: <http://www.w3.org/2006/time#>\n" + 
+//				"PREFIX  ssn:  <http://purl.oclc.org/NET/ssnx/ssn#>\n" + 
+//				"PREFIX  iot:  <http://purl.oclc.org/NET/iot#>\n" + 
+//				"\n" + 
+//				"SELECT ?platform ?dateOnly (sum(?power) as ?totalpower)\n" + 
+//				"WHERE\n" + 
+//				"{\n" + 
+//				"{\n" + 
+//				"  SELECT ?platform ?hours ?dateOnly (avg(?meterval) as ?power)\n" + 
+//				"  WHERE\n" + 
+//				"  {\n" + 
+//				"    ?meter ssn:onPlatform ?platform.\n" + 
+//				"    ?meterobs ssn:observedBy ?meter.\n" + 
+//				"    ?meterobs ssn:observationSamplingTime ?meterinstant;\n" + 
+//				"      ssn:observationResult ?metersnout.\n" + 
+//				"    ?meterinstant time:inXSDDateTime ?meterdate.\n" + 
+//				"    ?metersnout ssn:hasValue ?meterobsval.\n" + 
+//				"    ?meterobsval a iot:EnergyValue.\n" + 
+//				"    ?meterobsval iot:hasQuantityValue ?meterval.\n" + 
+//				"    FILTER(?meterval > 0)\n" + 
+//				"    FILTER (?meterdate > \"2012-07-01T00:00:00\"^^xsd:dateTime && ?meterdate < \"2012-07-02T00:00:00\"^^xsd:dateTime)\n" + 
+//				"  } GROUP BY ?platform ?meter (hours(?meterdate) as ?hours) (xsd:date(?meterdate) as ?dateOnly)\n" + 
+//				"}\n" + 
+//				"} GROUP BY ?platform ?dateOnly";
 		
 //		String queryStr = "  PREFIX  xsd:  <http://www.w3.org/2001/XMLSchema#>\n" + 
 //				"  PREFIX  iotsn: <http://iot.soton.ac.uk/smarthome/sensor#>\n" + 
@@ -397,22 +397,22 @@ public class test {
 //				"}\n" + 
 //				"GROUP BY ?sensor";
 		
-//		String queryStr = "PREFIX om-owl: <http://knoesis.wright.edu/ssw/ont/sensor-observation.owl#>\n" + 
-//				"PREFIX weather: <http://knoesis.wright.edu/ssw/ont/weather.owl#>\n" + 
-//				"PREFIX wgs84_pos: <http://www.w3.org/2003/01/geo/wgs84_pos#>\n" + 
-//				"PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>\n" + 
-//				"PREFIX owl-time: <http://www.w3.org/2006/time#>\n" + 
-//				"\n" + 
-//				"SELECT DISTINCT ?lat ?long ?alt\n" + 
-//				"WHERE {\n" + 
-//				"  ?sensor om-owl:generatedObservation [a weather:RainfallObservation; om-owl:samplingTime ?instant ] .\n" + 
-//				"  ?sensor om-owl:processLocation ?sensorLocation .\n" + 
-//				"  ?sensorLocation wgs84_pos:alt ?alt ;\n" + 
-//				"                  wgs84_pos:lat ?lat ;\n" + 
-//				"                  wgs84_pos:long ?long .\n" + 
-//				"  ?instant owl-time:inXSDDateTime ?time .\n" + 
-//				"  FILTER (?time>\"2003-04-01T00:00:00\"^^xsd:dateTime && ?time<\"2013-04-02T00:00:00\")\n" + 
-//				"}";
+		String queryStr = "PREFIX om-owl: <http://knoesis.wright.edu/ssw/ont/sensor-observation.owl#>\n" + 
+				"PREFIX weather: <http://knoesis.wright.edu/ssw/ont/weather.owl#>\n" + 
+				"PREFIX wgs84_pos: <http://www.w3.org/2003/01/geo/wgs84_pos#>\n" + 
+				"PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>\n" + 
+				"PREFIX owl-time: <http://www.w3.org/2006/time#>\n" + 
+				"\n" + 
+				"SELECT DISTINCT ?lat ?long ?alt\n" + 
+				"WHERE {\n" + 
+				"  ?sensor om-owl:generatedObservation [a weather:RainfallObservation; om-owl:samplingTime ?instant ] .\n" + 
+				"  ?sensor om-owl:processLocation ?sensorLocation .\n" + 
+				"  ?sensorLocation wgs84_pos:alt ?alt ;\n" + 
+				"                  wgs84_pos:lat ?lat ;\n" + 
+				"                  wgs84_pos:long ?long .\n" + 
+				"  ?instant owl-time:inXSDDateTime ?time .\n" + 
+				"  FILTER (?time>\"2003-04-01T00:00:00\"^^xsd:dateTime && ?time<\"2013-04-02T00:00:00\")\n" + 
+				"}";
 		
 //		String queryStr = "  PREFIX  xsd:  <http://www.w3.org/2001/XMLSchema#>\n" + 
 //				"  PREFIX  iotsn: <http://iot.soton.ac.uk/smarthome/sensor#>\n" + 
@@ -458,12 +458,12 @@ public class test {
 		
 //		RdfTableMapping mapping = new RdfTableMappingSesame();
 		RdfTableMapping mapping = new RdfTableMappingJena();
-//		mapping.loadMapping("mapping/4UT01.nt");
+		mapping.loadMapping("mapping/4UT01.nt");
 //		mapping.loadMapping("/Users/eugene/Downloads/knoesis_observations_map_snow_meta/AROC2.nt");
-		mapping.loadMapping("mapping/smarthome_environment.nt");
-		mapping.loadMapping("mapping/smarthome_sensors.nt");
-		mapping.loadMapping("mapping/smarthome_meter.nt");
-		mapping.loadMapping("mapping/smarthome_motion.nt");
+//		mapping.loadMapping("mapping/smarthome_environment.nt");
+//		mapping.loadMapping("mapping/smarthome_sensors.nt");
+//		mapping.loadMapping("mapping/smarthome_meter.nt");
+//		mapping.loadMapping("mapping/smarthome_motion.nt");
 		
 		
 //		System.out.println(queryStr);

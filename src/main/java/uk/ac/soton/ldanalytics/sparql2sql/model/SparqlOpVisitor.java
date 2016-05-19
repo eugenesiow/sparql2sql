@@ -606,9 +606,11 @@ public class SparqlOpVisitor implements OpVisitor {
 	}
 
 	public void visit(OpDistinct arg0) {
-		String previousSelect = previousSelects.remove(previousSelects.size()-1);
-		previousSelect = previousSelect.replaceFirst("SELECT", "SELECT DISTINCT");
-		previousSelects.add(previousSelect);
+		if(previousSelects.size()>0) { 
+			String previousSelect = previousSelects.remove(previousSelects.size()-1);
+			previousSelect = previousSelect.replaceFirst("SELECT", "SELECT DISTINCT");
+			previousSelects.add(previousSelect);
+		}
 	}
 
 	public void visit(OpSlice arg0) {

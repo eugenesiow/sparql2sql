@@ -32,11 +32,11 @@ public class TestH2Query {
         if (args.length > 1) {
         	queryPath = args[1];
         }
-		String outputPath = "/Users/eugene/Downloads/knoesis_results_snow/";
+		String outputPath = "/Users/eugene/Downloads/knoesis_results_gizmo2/";
 		if (args.length > 2) {
 			outputPath = args[2];
         }
-		String queryName = "q10";
+		String queryName = "q1";
 		if (args.length > 3) {
 			queryName = args[3];
         }
@@ -44,7 +44,8 @@ public class TestH2Query {
 		if (args.length > 4) {
 			runs = Integer.parseInt(args[4]);
         }
-		String h2connection = "jdbc:h2:tcp://192.168.0.103/~/h2/LSD_h2_databases/";
+//		String h2connection = "jdbc:h2:tcp://192.168.0.101/~/h2/LSD_h2_databases/";
+		String h2connection = "jdbc:h2:tcp://192.168.0.101/~/LSD_h2_databases/";
 		if (args.length > 5) {
 			h2connection = args[5];
         }
@@ -96,16 +97,17 @@ public class TestH2Query {
 							bw.append(stationName+","+translationTime+","+executionTime+"\n");
 							bw.flush();
 						} catch(SQLException se) {
+							System.out.println(h2connection+stationName);
 							bw.append(stationName+","+translationTime+",err\n");
 							bw.flush();
 							System.out.println(stationName);
-	//						se.printStackTrace();
+//							se.printStackTrace();
 						}
 					} else {
 						bw.append(stationName+","+translationTime+",0\n");
 						bw.flush();
 					}
-					
+//					Thread.sleep(1000);
 				}
 				System.out.println(totalCount);
 				
