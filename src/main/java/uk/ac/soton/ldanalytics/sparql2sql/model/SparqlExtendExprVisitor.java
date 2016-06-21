@@ -18,13 +18,14 @@ import org.apache.jena.sparql.expr.NodeValue;
 
 public class SparqlExtendExprVisitor implements ExprVisitor {
 	
+	String fullExpression = "";
 	String expression = "";
 	private Map<String, String> varMapping;
 	Boolean isIf = false;
 
 	public void finishVisit() {
 		if(isIf) {
-			expression = "CASE \n" + expression + "\nEND";
+			fullExpression = "CASE \n" + fullExpression + "\nEND";
 		}
 	}
 
@@ -48,12 +49,12 @@ public class SparqlExtendExprVisitor implements ExprVisitor {
 		if(arg0.getFunctionSymbol().getSymbol().equals("if")) {
 			expression = "WHEN " + FormatUtil.processExprType(arg0.getArg1(),varMapping) + " THEN " + arg0.getArg2();
 			String elsePart = FormatUtil.processExprType(arg0.getArg3(),varMapping);
-			if(!elsePart.startsWith("WHEN")) {
-				expression += " ELSE ";
+			if(!elsePart.startsWith("if")) {
+				expression += " ELSE " + elsePart + "\n";
 			} else {
 				expression += "\n";
 			}
-			expression += elsePart;
+			fullExpression = expression + fullExpression;
 			isIf=true;
 		}
 	}
@@ -79,7 +80,7 @@ public class SparqlExtendExprVisitor implements ExprVisitor {
 	}
 
 	public String getExpression() {
-		return expression;
+		return fullExpression;
 	}
 
 	public void setMapping(Map<String, String> varMapping) {

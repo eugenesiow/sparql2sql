@@ -36,7 +36,7 @@ public class TestH2Query {
 		if (args.length > 2) {
 			outputPath = args[2];
         }
-		String queryName = "q1";
+		String queryName = "q3";
 		if (args.length > 3) {
 			queryName = args[3];
         }
