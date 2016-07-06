@@ -56,3 +56,4 @@ A Jetty-based server to provide a SPARQL endpoint with an RDBMS backend and usin
 * [sparql2stream](https://github.com/eugenesiow/sparql2stream)
 * [sparql2sql-server](https://github.com/eugenesiow/sparql2sql-server)
 * [Linked Data Analytics](http://eugenesiow.github.io/iot/)
+* [PIOTRe: Personal IoT Repository](https://github.com/eugenesiow/PIOTRe)
