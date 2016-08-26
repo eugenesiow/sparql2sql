@@ -1,6 +1,7 @@
 package uk.ac.soton.ldanalytics.sparql2sql.model;
 
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.HashMap;
@@ -10,6 +11,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import org.apache.commons.io.IOUtils;
 import org.apache.jena.graph.Node;
 import org.apache.jena.query.Query;
 import org.apache.jena.query.QueryExecution;
@@ -22,7 +24,6 @@ import org.apache.jena.rdf.model.Statement;
 import org.apache.jena.rdf.model.StmtIterator;
 import org.apache.jena.sparql.core.Var;
 import org.apache.jena.sparql.engine.binding.Binding;
-import org.openrdf.repository.Repository;
 
 import uk.ac.soton.ldanalytics.sparql2sql.riot.RDFReaderMap;
 import uk.ac.soton.ldanalytics.sparql2sql.util.FormatUtil;
@@ -39,10 +40,23 @@ public class RdfTableMappingJena implements RdfTableMapping {
 	}
 	
 	public void loadMapping(String filename) {
+		try {
+			InputStream in = new FileInputStream(filename);
+			loadMappingBase(in);
+		} catch (FileNotFoundException e) {
+			e.printStackTrace();
+		}		
+	}
+	
+	public void loadMappingStr(String mapping) {
+		InputStream in = IOUtils.toInputStream(mapping);
+		loadMappingBase(in);
+	}
+	
+	private void loadMappingBase(InputStream in) {
 		Model map = ModelFactory.createDefaultModel();
 		RDFReaderMap rd = new RDFReaderMap("N-Triples");
 		try {
-			InputStream in = new FileInputStream(filename);
 			rd.read(map, in,"");
 			in.close();
 		} catch(IOException e) {
@@ -51,7 +65,7 @@ public class RdfTableMappingJena implements RdfTableMapping {
 //		map.read(filename);
 		mapping.add(JoinMap(map));
 	}
-	
+
 	private Model JoinMap(Model map) {
 		Model newMap = ModelFactory.createDefaultModel();
 		StmtIterator stmts = map.listStatements();

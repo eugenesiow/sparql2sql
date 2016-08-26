@@ -1,13 +1,16 @@
 package uk.ac.soton.ldanalytics.sparql2sql.model;
 
-import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import org.apache.commons.io.IOUtils;
 import org.openrdf.OpenRDFException;
 import org.openrdf.model.IRI;
 import org.openrdf.model.Literal;
@@ -40,13 +43,12 @@ public class RdfTableMappingSesame implements RdfTableMapping {
 		mapping.initialize();
 	}
 	
-	public void loadMapping(String filename) {
+	public void loadMappingBase(InputStream in) {
 		Repository repo = new SailRepository(new MemoryStore());
-		repo.initialize();
+		repo.initialize();	
 		
-		File file = new File(filename);
 		try (RepositoryConnection con = repo.getConnection()) {
-		   con.add(file, null, RDFFormat.NTRIPLES);
+		   con.add(in, null, RDFFormat.NTRIPLES);
 		   try (RepositoryConnection mapCon = mapping.getConnection()) {
 			   ValueFactory vf = mapCon.getValueFactory();
 			   try (RepositoryResult<Statement> statements = con.getStatements(null, null, null, false)) {
@@ -61,6 +63,7 @@ public class RdfTableMappingSesame implements RdfTableMapping {
 		   } catch (OpenRDFException e1) {
 			   e1.printStackTrace();
 		   }
+		   in.close();
 		}
 		catch (OpenRDFException e) {
 		   e.printStackTrace();
@@ -68,6 +71,21 @@ public class RdfTableMappingSesame implements RdfTableMapping {
 			e.printStackTrace();
 		}
 
+	}
+	
+	public void loadMapping(String filename) {
+		InputStream in = null;
+		try {
+	        in = new FileInputStream(filename);
+	    } catch (IOException e) {
+	        e.printStackTrace();
+	    }
+		loadMappingBase(in);
+	}
+	
+	public void loadMappingStr(String mappingStr) {
+		InputStream in = IOUtils.toInputStream(mappingStr);
+		loadMappingBase(in);
 	}
 	
 	private Value checkUri(Value node, ValueFactory vf) {
