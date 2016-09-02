@@ -748,13 +748,14 @@ public class SparqlOpVisitor implements OpVisitor {
 		for(String graphUri:namedGraphURIs) {
 			dialect = "ESPER";
 			String[] parts = graphUri.split(";");
+//			System.out.println(graphUri);
 			if(parts.length>1) {
 				String additional = "";
-				if(parts.length>3) {
+				if(parts.length>4) {
 					additional = ".win";
-					if(parts[3].equals("TUMBLING")) {
+					if(parts[4].equals("TUMBLING")) {
 						additional += ":time_batch";
-					} else if(parts[3].equals("STEP")) {
+					} else if(parts[4].equals("STEP")) {
 						additional += ":time";
 					}
 					additional += "(" + parts[1] + " " + FormatUtil.timePeriod(parts[2]) + ")";
