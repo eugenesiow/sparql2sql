@@ -9,6 +9,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
+import org.apache.commons.lang3.NotImplementedException;
 import org.apache.jena.graph.Node;
 import org.apache.jena.graph.Triple;
 import org.apache.jena.query.ARQ;
@@ -73,6 +74,8 @@ public class SparqlOpVisitor implements OpVisitor {
 	Map<String,String> tableToSyntax = new HashMap<String,String>();
 	List<Set<String>> groupLists = new ArrayList<Set<String>>();
 	List<Set<String>> havingLists = new ArrayList<Set<String>>();
+	Map<String,RdfTableMapping> mappingCatalog = new HashMap<String,RdfTableMapping>();
+	String currentQueryStr = null;
 	int globalVarMappingCount = -1;
 	
 	String selectClause = "SELECT ";
@@ -101,8 +104,27 @@ public class SparqlOpVisitor implements OpVisitor {
 	public void useMapping(RdfTableMapping mapping) {
 		this.mapping = mapping;
 	}
-
 	
+	/**
+	 * Reads a catalogue of mapping closures using the specific SWIBRE engine and loads them into a map in memory
+	 * @param a map of named graphs and streams and paths of mapping closures
+	 */
+	public void setMappingCatalog(Map<String,String> catalog,String engineType) {
+		for(Entry<String,String> catalogEntry:catalog.entrySet()) {
+			RdfTableMapping mapping = null;
+			if(engineType.toLowerCase().equals("jena")) {
+				mapping = new RdfTableMappingJena();
+			} else if(engineType.toLowerCase().equals("sesame")) {
+				mapping = new RdfTableMappingSesame();
+			}
+			String[] parts = catalogEntry.getValue().split(";");
+			for(int i=0;i<parts.length;i++) {
+				mapping.loadMapping(parts[i]);
+			}
+			mappingCatalog.put(catalogEntry.getKey(),mapping);
+		}
+	}
+
 	/**
 	 * BGP Resolution visitor
 	 */
@@ -117,6 +139,7 @@ public class SparqlOpVisitor implements OpVisitor {
 			queryStr += "\t"+nodeToString(pattern.getSubject())+" "+nodeToString(pattern.getPredicate())+" "+nodeToString(pattern.getObject())+".\n"; 
 		}
 		queryStr += "}";
+		currentQueryStr = queryStr;
 		
 //			System.out.println(queryStr);
 		
@@ -198,48 +221,39 @@ public class SparqlOpVisitor implements OpVisitor {
 	
 
 	public void visit(OpQuadPattern arg0) {
-		// TODO Auto-generated method stub
-		
+		throw new NotImplementedException("QuadPattern not implemented");
 	}
 
 	public void visit(OpQuadBlock arg0) {
-		// TODO Auto-generated method stub
-		
+		throw new NotImplementedException("QuadBlock not implemented");
 	}
 
 	public void visit(OpTriple arg0) {
-		// TODO Auto-generated method stub
-		
+		throw new NotImplementedException("Triple not implemented");
 	}
 
 	public void visit(OpQuad arg0) {
-		// TODO Auto-generated method stub
-		
+		throw new NotImplementedException("Quad not implemented");
 	}
 
 	public void visit(OpPath arg0) {
-		// TODO Auto-generated method stub
-		
+		throw new NotImplementedException("Path not implemented");
 	}
 
 	public void visit(OpTable arg0) {
-		// TODO Auto-generated method stub
-		
+		throw new NotImplementedException("Table not implemented");
 	}
 
 	public void visit(OpNull arg0) {
-		// TODO Auto-generated method stub
-		
+		throw new NotImplementedException("Null not implemented");
 	}
 
 	public void visit(OpProcedure arg0) {
-		// TODO Auto-generated method stub
-		
+		throw new NotImplementedException("Procedure not implemented");
 	}
 
 	public void visit(OpPropFunc arg0) {
-		// TODO Auto-generated method stub
-		
+		throw new NotImplementedException("PropFunc not implemented");
 	}
 
 	public void visit(OpFilter filters) {
@@ -284,29 +298,31 @@ public class SparqlOpVisitor implements OpVisitor {
 //		System.out.println(whereClause);
 	}
 
-	public void visit(OpGraph arg0) {
-		// TODO Auto-generated method stub
-		
+	public void visit(OpGraph graphop) {
+		String graphUri = graphop.getNode().getURI();
+		if(graphUri.contains(";WINDOW")) {
+			String[] parts = graphUri.split(";");
+			if(parts.length>1) {
+				RdfTableMapping windowMapping = mappingCatalog.get(parts[0]);
+				hasResults.add(ProcessResults(windowMapping.executeQuery(currentQueryStr,dialect))); //check if there are results for the BGP
+			}
+		}
 	}
 
 	public void visit(OpService arg0) {
-		// TODO Auto-generated method stub
-		
+		throw new NotImplementedException("Service clause not implemented");
 	}
 
 	public void visit(OpDatasetNames arg0) {
-		// TODO Auto-generated method stub
-		
+		throw new NotImplementedException("Datasetnames not implemented");
 	}
 
 	public void visit(OpLabel arg0) {
-		// TODO Auto-generated method stub
-		
+		throw new NotImplementedException("Label not implemented");
 	}
 
 	public void visit(OpAssign arg0) {
-		// TODO Auto-generated method stub
-		
+		throw new NotImplementedException("Assign not implemented");
 	}
 
 	public void visit(OpExtend arg0) {
@@ -423,43 +439,36 @@ public class SparqlOpVisitor implements OpVisitor {
 	}
 
 	public void visit(OpDiff arg0) {
-		// TODO Auto-generated method stub
-		
+		throw new NotImplementedException("Diff not implemented");
 	}
 
 	public void visit(OpMinus arg0) {
-		// TODO Auto-generated method stub
-		
+		throw new NotImplementedException("Minus not implemented");
 	}
 
 	public void visit(OpConditional arg0) {
-		// TODO Auto-generated method stub
-		
+		throw new NotImplementedException("Conditional not implemented");
 	}
 
 	public void visit(OpSequence arg0) {
-		// TODO Auto-generated method stub
-		
+		throw new NotImplementedException("Sequence not implemented");
 	}
 
 	public void visit(OpDisjunction arg0) {
-		// TODO Auto-generated method stub
-		
+		throw new NotImplementedException("Disjunction not implemented");
 	}
 
 	public void visit(OpExt arg0) {
-		
+		throw new NotImplementedException("Ext not implemented");
 		
 	}
 
 	public void visit(OpList arg0) {
-		// TODO Auto-generated method stub
-		
+		throw new NotImplementedException("List not implemented");
 	}
 
 	public void visit(OpOrder arg0) {
-		// TODO Auto-generated method stub
-		
+		throw new NotImplementedException("Order not implemented");
 	}
 
 	public void visit(OpProject arg0) {
@@ -601,8 +610,7 @@ public class SparqlOpVisitor implements OpVisitor {
 	}
 
 	public void visit(OpReduced arg0) {
-		// TODO Auto-generated method stub
-		 
+		throw new NotImplementedException("Reduced not implemented");
 	}
 
 	public void visit(OpDistinct arg0) {
@@ -750,6 +758,7 @@ public class SparqlOpVisitor implements OpVisitor {
 			String[] parts = graphUri.split(";");
 //			System.out.println(graphUri);
 			if(parts.length>1) {
+				String uri = parts[0];				
 				String additional = "";
 				if(parts.length>4) {
 					additional = ".win";
@@ -759,6 +768,11 @@ public class SparqlOpVisitor implements OpVisitor {
 						additional += ":time";
 					}
 					additional += "(" + parts[1] + " " + FormatUtil.timePeriod(parts[2]) + ")";
+					
+					if(mappingCatalog.containsKey(uri)) { //rename the stream name in the mapping catalog according to the window name
+						RdfTableMapping mapping = mappingCatalog.remove(uri);
+						mappingCatalog.put(parts[3], mapping);
+					}
 				} else {
 					additional = ".std";
 					if(parts[1].equals("LAST")) {
@@ -766,7 +780,7 @@ public class SparqlOpVisitor implements OpVisitor {
 					}
 				}
 
-				uriToSyntax.put(parts[0], additional);
+				uriToSyntax.put(uri, additional);
 			}
 		}
 	}
