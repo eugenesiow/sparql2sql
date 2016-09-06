@@ -336,6 +336,7 @@ public class SparqlOpVisitor implements OpVisitor {
 					Map<String,String> varMapping = varMappings.get(i);
 					SparqlExtendExprVisitor v = new SparqlExtendExprVisitor();
 					v.setMapping(varMapping);
+					v.setMappings(varMappings);
 					ExprWalker.walk(v,expr);
 					v.finishVisit();
 					aliases.put(var.getName(), v.getExpression());

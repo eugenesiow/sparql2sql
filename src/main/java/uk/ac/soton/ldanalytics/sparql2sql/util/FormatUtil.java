@@ -29,7 +29,18 @@ public class FormatUtil {
 		}		
 	}
 	
-
+	public static String processExprType(Expr expr, List<Map<String, String>> varMappings) { //if multiple var mappings
+		String expression = "";
+		for(Map<String, String> varMapping:varMappings) {
+			String newExpr = processExprType(expr,varMapping);
+			if(!expr.toString().equals(newExpr)) { //if its not equals it must be mapped, so return the result of the mapping
+				return newExpr;
+			} else {
+				expression = newExpr;
+			}
+		}
+		return expression;
+	}
 
 	public static String processExprType(Expr expr, Map<String, String> varMapping) {
 		String expression = "";
@@ -88,6 +99,8 @@ public class FormatUtil {
 		String mappedName = varName;
 		if(varMapping.containsKey(varName)) {
 			mappedName = varMapping.get(varName);
+		} else {
+			mappedName = "?"+varName;
 		}
 		return mappedName;
 	}
