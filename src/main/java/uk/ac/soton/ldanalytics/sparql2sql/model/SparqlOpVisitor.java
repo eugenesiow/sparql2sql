@@ -474,6 +474,7 @@ public class SparqlOpVisitor implements OpVisitor {
 	public void visit(OpProject arg0) {
 		int varMappingCount = 0;
 		Map<String,String> preventDuplicates = new HashMap<String,String>(); //to prevent duplicate var names in the case of non unions at this level
+		int index = 0;
 		for(Map<String,String> varMapping:varMappings) {
 			//build filters
 			for(List<String> filterStrs:filterList) {
@@ -521,7 +522,10 @@ public class SparqlOpVisitor implements OpVisitor {
 					selectClause += selectAddition;
 				} else {
 //					System.out.println(var.getName() + ":" + selectAddition + ":" + preventDuplicates.get(var.getName()));
-					selectClause = selectClause.replace(preventDuplicates.get(var.getName()), selectAddition);
+					String former = preventDuplicates.get(var.getName());
+					String latter = selectAddition;
+					if(former.length()<latter.length()) //TODO: this is a temp fix when two graphs are joined and we need the already processed selected elements to be propogated
+						selectClause = selectClause.replace(former, latter);
 				}
 				preventDuplicates.put(var.getName(),selectAddition);
 				
@@ -529,7 +533,7 @@ public class SparqlOpVisitor implements OpVisitor {
 					selectClause = selectClause.trim().substring(0, selectClause.trim().length()-1);
 				}
 			}
-	//		System.out.println(selectClause);
+//			System.out.println(selectClause);
 			
 			count = 0; //add from tables
 			for(String table:tableList) {
@@ -566,6 +570,8 @@ public class SparqlOpVisitor implements OpVisitor {
 			}
 			
 			varMappingCount++;
+			varMappings.set(index, varMapping);
+			index++;
 		}
 		
 		String unionStr = "";
@@ -705,16 +711,20 @@ public class SparqlOpVisitor implements OpVisitor {
 		if(selectClause.trim().equals("SELECT")) {
 			return "";
 		} 
-		if(fromClause.trim().equals("FROM")) {
-			if(dialect.equals("ESPER") && uriToSyntax.size()>0) {
+		if(fromClause.trim().equals("FROM")) { //if from clause empty
+			if(dialect.equals("ESPER") && uriToSyntax.size()>0) { //if esper, build the from clause
+				String separator = " ";
+				int index = 0;
 				for(String val:uriToSyntax.values()) {
-					for(Entry<String,String> pair:tableToSyntax.entrySet()) {
-						if(pair.getValue().equals(val)) {
-							val = pair.getKey() + val;
-							break;
-						}
-					}
-					fromClause += " " + val;
+//					System.out.println(tableToSyntax.get(val));
+					if(index>0) separator = ",";
+//					for(Entry<String,String> pair:tableToSyntax.entrySet()) {
+//						if(pair.getValue().equals(val)) {
+							val = val + tableToSyntax.get(val); //add the window, type and time slide at the end of the stream name
+//						}
+//					}
+					fromClause += separator + val;
+					index++;
 				}
 			} else {
 				return "";
@@ -779,7 +789,6 @@ public class SparqlOpVisitor implements OpVisitor {
 						additional += ":lastevent()";
 					}
 				}
-
 				uriToSyntax.put(uri, additional);
 			}
 		}
@@ -793,11 +802,11 @@ public class SparqlOpVisitor implements OpVisitor {
 		for(Entry<String,String> stream:streamCatalog.entrySet()) {
 			if(uriToSyntax.containsKey(stream.getValue())) {
 				tableToSyntax.put(stream.getKey(), uriToSyntax.get(stream.getValue()));
+				uriToSyntax.put(stream.getValue(), stream.getKey()); //put uri, table pairs in
 			} else {
 				tableToSyntax.put(stream.getKey(), stream.getKey());
 			}
 		}
-		
 	}
 
 }
