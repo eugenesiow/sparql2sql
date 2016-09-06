@@ -75,6 +75,8 @@ public class SparqlOpVisitor implements OpVisitor {
 	List<Set<String>> groupLists = new ArrayList<Set<String>>();
 	List<Set<String>> havingLists = new ArrayList<Set<String>>();
 	Map<String,RdfTableMapping> mappingCatalog = new HashMap<String,RdfTableMapping>();
+	Map<String,String> namedGraphVars = new HashMap<String,String>();
+	Map<String,Set<String>> namedGraphSelect = new HashMap<String,Set<String>>();
 	String currentQueryStr = null;
 	int globalVarMappingCount = -1;
 	
@@ -179,6 +181,15 @@ public class SparqlOpVisitor implements OpVisitor {
 //			System.out.println(r.getVarMapping());
 //		}
 		return hasResults;
+	}
+	
+	private Boolean ProcessGraphResults(ResultSet results, String graphUri) { //process results for graph static datasets
+		for(Result result:results.getResults()) {
+			for(String var:result.getVarMapping().keySet()) {
+				namedGraphVars.put(var,graphUri);
+			}
+		}
+		return ProcessResults(results);		
 	}
 	
 	/**
@@ -306,6 +317,10 @@ public class SparqlOpVisitor implements OpVisitor {
 				RdfTableMapping windowMapping = mappingCatalog.get(parts[0]);
 				hasResults.add(ProcessResults(windowMapping.executeQuery(currentQueryStr,dialect))); //check if there are results for the BGP
 			}
+		}
+		else {
+			RdfTableMapping windowMapping = mappingCatalog.get(graphUri);
+			hasResults.add(ProcessGraphResults(windowMapping.executeQuery(currentQueryStr,dialect),graphUri));
 		}
 	}
 
@@ -491,8 +506,13 @@ public class SparqlOpVisitor implements OpVisitor {
 			filterList.clear();
 			
 			int count=0;
-
+			
 			for(Var var:arg0.getVars()) {
+				String namedGraph = null;
+				String strippedVar = var.toString().replace("?", "");
+				if(namedGraphVars.containsKey(strippedVar) && dialect.equals("ESPER")) { //check if var in project is part of a named graph
+					namedGraph = namedGraphVars.get(strippedVar);
+				}
 //				System.out.println(var + ":" + selectClause + ":" + varMapping);
 				if(count++>0) {
 					selectClause += " , ";
@@ -520,7 +540,12 @@ public class SparqlOpVisitor implements OpVisitor {
 				}
 				
 				if(!preventDuplicates.containsKey(var.getName())) {
-					selectClause += selectAddition;
+					if(namedGraph==null) {
+						selectClause += selectAddition;
+					} else {
+						AddNamedGraphSelect(namedGraph,selectAddition);
+						count--;
+					}
 				} else {
 //					System.out.println(var.getName() + ":" + selectAddition + ":" + preventDuplicates.get(var.getName()));
 					String former = preventDuplicates.get(var.getName());
@@ -530,11 +555,22 @@ public class SparqlOpVisitor implements OpVisitor {
 				}
 				preventDuplicates.put(var.getName(),selectAddition);
 				
-				if(selectClause.trim().endsWith(",")) { //remove extra commas at the end
-					selectClause = selectClause.trim().substring(0, selectClause.trim().length()-1);
-				}
+				selectClause = trimComma(selectClause);
 			}
 //			System.out.println(selectClause);
+			
+			//for streams, build static sql froms
+			for(Entry<String,Set<String>> selects:namedGraphSelect.entrySet()) {
+				String namedGraph = selects.getKey();
+				String localSelectClause = "SELECT ";
+				String sep = "";
+				for(String vars:selects.getValue()) {
+					localSelectClause += sep + vars ;
+					sep = " , ";
+				}
+//				localSelectClause = trimComma(localSelectClause);
+				tableToSyntax.put(namedGraph, "[ '"+localSelectClause+"' ]");
+			}
 			
 			count = 0; //add from tables
 			for(String table:tableList) {
@@ -614,6 +650,25 @@ public class SparqlOpVisitor implements OpVisitor {
 		havingClause = "HAVING ";
 		
 		bgpStarted = false;
+	}
+
+	private void AddNamedGraphSelect(String namedGraph, String selectAddition) {
+		String graphName = uriToSyntax.get(namedGraph);
+		if(graphName==null)
+			graphName = namedGraph;
+		Set<String> selects = namedGraphSelect.get(graphName);
+		if(selects==null) {
+			selects = new HashSet<String>();
+		}
+		selects.add(selectAddition);
+		namedGraphSelect.put(graphName, selects);
+	}
+
+	private String trimComma(String selectClause) {
+		if(selectClause.trim().endsWith(",")) { //remove extra commas at the end
+			selectClause = selectClause.trim().substring(0, selectClause.trim().length()-1);
+		}
+		return selectClause;
 	}
 
 	public void visit(OpReduced arg0) {
@@ -767,8 +822,7 @@ public class SparqlOpVisitor implements OpVisitor {
 		for(String graphUri:namedGraphURIs) {
 			dialect = "ESPER";
 			String[] parts = graphUri.split(";");
-//			System.out.println(graphUri);
-			if(parts.length>1) {
+			if(parts.length>1) { //is a stream
 				String uri = parts[0];				
 				String additional = "";
 				if(parts.length>4) {
@@ -791,6 +845,8 @@ public class SparqlOpVisitor implements OpVisitor {
 					}
 				}
 				uriToSyntax.put(uri, additional);
+			} else { //is a named graph
+				uriToSyntax.put(graphUri, graphUri);
 			}
 		}
 	}
