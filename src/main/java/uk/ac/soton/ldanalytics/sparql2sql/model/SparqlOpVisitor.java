@@ -278,6 +278,7 @@ public class SparqlOpVisitor implements OpVisitor {
 			for(Expr filter:filters.getExprs().getList()) {
 				SparqlFilterExprVisitor v = new SparqlFilterExprVisitor();
 				v.setMapping(varMapping);
+				v.setMappings(varMappings);
 				ExprWalker.walk(v,filter);
 				v.finishVisit();
 				String modifier = "";
@@ -379,6 +380,7 @@ public class SparqlOpVisitor implements OpVisitor {
 
 	public void visit(OpJoin arg0) {
 		// TODO fix join
+		// TODO possibly to join the varMappings in join instead of passing all up to project
 		filterList.clear();
 	}
 
@@ -544,7 +546,10 @@ public class SparqlOpVisitor implements OpVisitor {
 						selectClause += selectAddition;
 					} else {
 						AddNamedGraphSelect(namedGraph,selectAddition);
-						count--;
+						if(selectAddition.contains("AS")) {
+							selectClause += selectAddition.split("AS")[1];
+						}
+//						count--;
 					}
 				} else {
 //					System.out.println(var.getName() + ":" + selectAddition + ":" + preventDuplicates.get(var.getName()));
@@ -559,17 +564,30 @@ public class SparqlOpVisitor implements OpVisitor {
 			}
 //			System.out.println(selectClause);
 			
-			//for streams, build static sql froms
-			for(Entry<String,Set<String>> selects:namedGraphSelect.entrySet()) {
-				String namedGraph = selects.getKey();
-				String localSelectClause = "SELECT ";
-				String sep = "";
-				for(String vars:selects.getValue()) {
-					localSelectClause += sep + vars ;
-					sep = " , ";
+			if(dialect.equals("ESPER")) {
+				//for streams, build static sql froms
+				Map<String,String> aliasReplace = new HashMap<String,String>();
+				for(Entry<String,Set<String>> selects:namedGraphSelect.entrySet()) {
+					String namedGraph = selects.getKey();
+					String localSelectClause = "SELECT ";
+					String sep = "";
+					for(String vars:selects.getValue()) {
+						if(vars.contains("AS")) {
+							String[] aliasParts = vars.split("AS");
+							aliasReplace.put(aliasParts[0].trim(), aliasParts[1].trim());
+						}
+						localSelectClause += sep + vars ;
+						sep = " , ";
+					}
+	//				localSelectClause = trimComma(localSelectClause);
+					tableToSyntax.put(namedGraph, "[ '"+localSelectClause+"' ]");
 				}
-//				localSelectClause = trimComma(localSelectClause);
-				tableToSyntax.put(namedGraph, "[ '"+localSelectClause+"' ]");
+				
+				//fix aliases in where and having		
+				for(Entry<String,String> aliasPair:aliasReplace.entrySet()) {
+					whereClause = whereClause.replaceAll(aliasPair.getKey(), aliasPair.getValue());
+					havingClause = havingClause.replaceAll(aliasPair.getKey(), aliasPair.getValue());
+				}
 			}
 			
 			count = 0; //add from tables
@@ -578,7 +596,13 @@ public class SparqlOpVisitor implements OpVisitor {
 					fromClause += " , ";
 				}
 				if(tableToSyntax.containsKey(table)) {
-					fromClause += table + tableToSyntax.get(table);
+					String additional = tableToSyntax.get(table);
+					String prefix = "";
+					if(dialect.equals("ESPER") && additional.trim().startsWith("[") && additional.trim().endsWith("]")) {//if its an sql statement 
+						prefix = "sql:";
+						additional = " " + additional;
+					}	
+					fromClause += prefix + table + additional;
 				} else {
 					fromClause += table;
 				}
@@ -864,6 +888,7 @@ public class SparqlOpVisitor implements OpVisitor {
 				tableToSyntax.put(stream.getKey(), stream.getKey());
 			}
 		}
+		
 	}
 
 }

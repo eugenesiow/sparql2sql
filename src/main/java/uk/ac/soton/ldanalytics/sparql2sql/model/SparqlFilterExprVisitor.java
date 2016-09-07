@@ -26,7 +26,10 @@ public class SparqlFilterExprVisitor implements ExprVisitor {
 	List<String> exprParts = new ArrayList<String>();
 	List<String> havingParts = new ArrayList<String>();
 	String[] fList = {"<",">","=","!=","<=",">="};
+	String[] aList = {"+","-","*","/"};
 	List<String> functionList = Arrays.asList(fList);
+	List<String> arithmeticList = Arrays.asList(aList);
+	private List<Map<String, String>> varMappings;
 	String combinePart = "";
 	private Map<String, String> varMapping;
 
@@ -78,6 +81,14 @@ public class SparqlFilterExprVisitor implements ExprVisitor {
 				exprParts.add(currentPart);
 			}
 			currentPart = "";
+		} else if(arithmeticList.contains(args.getOpName())) {
+			Expr leftSide = args.getArg1();
+			Expr rightSide = args.getArg2();
+			currentPart = FormatUtil.handleExpr(leftSide,varMappings) + args.getOpName() + FormatUtil.handleExpr(rightSide, varMappings);
+			varMapping.put(args.toString(), currentPart);
+//			System.out.println(varMapping);
+			havingParts.add(currentPart);
+//			System.out.println(currentPart);
 		}
 		else if(args.getOpName().equals("&&")) 
 			combinePart = " AND ";
@@ -112,6 +123,10 @@ public class SparqlFilterExprVisitor implements ExprVisitor {
 
 	public void setMapping(Map<String,String> varMapping) {
 		this.varMapping = varMapping;		
+	}
+	
+	public void setMappings(List<Map<String,String>> varMappings) {
+		this.varMappings = varMappings;
 	}
 
 }

@@ -129,8 +129,23 @@ public class FormatUtil {
 			return FormatUtil.mapVar(expr.getVarName(),varMapping);
 		} else if(expr.isConstant()) {
 			return parseNodeValue(expr.getConstant());
+		} else if(expr.isFunction()) {
+			return "("+ FormatUtil.mapVar(expr.toString(),varMapping) + ")";
 		}
 		return expr.toString();
+	}
+	
+	public static String handleExpr(Expr expr, List<Map<String, String>> varMappings) { //if multiple var mappings
+		String expression = "";
+		for(Map<String, String> varMapping:varMappings) {
+			String newExpr = handleExpr(expr,varMapping);
+			if(!expr.toString().equals(newExpr)) { //if its not equals it must be mapped, so return the result of the mapping
+				return newExpr;
+			} else {
+				expression = newExpr;
+			}
+		}
+		return expression;
 	}
 
 	private static String processLiteral(String litVal, String datatype) {
@@ -202,7 +217,9 @@ public class FormatUtil {
 	}
 
 	public static boolean isAggVar(Expr expr) {
-		return expr.getVarName().startsWith(".");
+		if(expr.getVarName()!=null)
+			return expr.getVarName().startsWith(".");
+		return false;
 	}
 
 	public static String timePeriod(String timeShort) {
