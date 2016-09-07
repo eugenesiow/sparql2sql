@@ -1,11 +1,10 @@
 package uk.ac.soton.ldanalytics.sparql2sql.model;
 
-import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
-
-import uk.ac.soton.ldanalytics.sparql2sql.util.FormatUtil;
+import java.util.Set;
 
 import org.apache.jena.sparql.expr.Expr;
 import org.apache.jena.sparql.expr.ExprAggregator;
@@ -19,12 +18,14 @@ import org.apache.jena.sparql.expr.ExprVar;
 import org.apache.jena.sparql.expr.ExprVisitor;
 import org.apache.jena.sparql.expr.NodeValue;
 
+import uk.ac.soton.ldanalytics.sparql2sql.util.FormatUtil;
+
 public class SparqlFilterExprVisitor implements ExprVisitor {
 	String expression = "";
 	String havingExpression = "";
 	String currentPart = "";
-	List<String> exprParts = new ArrayList<String>();
-	List<String> havingParts = new ArrayList<String>();
+	Set<String> exprParts = new LinkedHashSet<String>();
+	Set<String> havingParts = new LinkedHashSet<String>();
 	String[] fList = {"<",">","=","!=","<=",">="};
 	String[] aList = {"+","-","*","/"};
 	List<String> functionList = Arrays.asList(fList);
@@ -74,7 +75,7 @@ public class SparqlFilterExprVisitor implements ExprVisitor {
 //			System.out.println(args);
 			Expr leftSide = args.getArg1();
 			Expr rightSide = args.getArg2();
-			currentPart += FormatUtil.handleExpr(leftSide,varMapping) + args.getOpName() + FormatUtil.handleExpr(rightSide, varMapping);
+			currentPart = FormatUtil.handleExpr(leftSide,varMapping) + args.getOpName() + FormatUtil.handleExpr(rightSide, varMapping);
 			if(FormatUtil.isAggVar(leftSide)) {
 				havingParts.add(currentPart);
 			} else {
@@ -87,7 +88,6 @@ public class SparqlFilterExprVisitor implements ExprVisitor {
 			currentPart = FormatUtil.handleExpr(leftSide,varMappings) + args.getOpName() + FormatUtil.handleExpr(rightSide, varMappings);
 			varMapping.put(args.toString(), currentPart);
 //			System.out.println(varMapping);
-			havingParts.add(currentPart);
 //			System.out.println(currentPart);
 		}
 		else if(args.getOpName().equals("&&")) 
