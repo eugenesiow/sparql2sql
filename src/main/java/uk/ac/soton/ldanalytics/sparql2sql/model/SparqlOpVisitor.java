@@ -383,6 +383,7 @@ public class SparqlOpVisitor implements OpVisitor {
 	public void visit(OpJoin arg0) {
 		// TODO fix join
 		// TODO possibly to join the varMappings in join instead of passing all up to project
+//		System.out.println(varMappings);
 		filterList.clear();
 	}
 
@@ -578,10 +579,10 @@ public class SparqlOpVisitor implements OpVisitor {
 					String localFromClause = "FROM "+namedGraph;
 					String sep = "";
 					for(String vars:selects.getValue()) {
-						if(vars.contains("AS")) {
-							String[] aliasParts = vars.split("AS");
+//						if(vars.contains("AS")) {
+//							String[] aliasParts = vars.split("AS");
 //							aliasReplace.put(aliasParts[0].trim(), aliasParts[1].trim());
-						}
+//						}
 						localSelectClause += sep + vars ;
 						sep = " , ";
 					}

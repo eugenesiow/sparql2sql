@@ -137,7 +137,6 @@ public class QueryIterTriplePatternAlt extends QueryIterRepeatApply
 	        				List<String> cols = FormatUtil.extractCols(pattern);
 	        				pattern = pattern.replaceAll("\\{.*?}", "(.*?)");
 	        				Matcher m = Pattern.compile(pattern).matcher(uri);
-	        				
 	        				while(m.find()) {
 	        					if(cols.size()<=m.groupCount()) {
 		        					for(int i=1;i<=cols.size();i++) {

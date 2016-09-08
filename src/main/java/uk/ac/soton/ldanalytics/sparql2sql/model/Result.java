@@ -27,6 +27,12 @@ public class Result {
 	}
 	
 	public void addWhere(String where) {
+		//check if leftarg = rightarg, then don't add
+		String[] parts = where.split("=");
+		if(parts.length>1) {
+			if(parts[0].equals(parts[1])) 
+				where = "";
+		}
 		whereClause = where;
 	}
 	

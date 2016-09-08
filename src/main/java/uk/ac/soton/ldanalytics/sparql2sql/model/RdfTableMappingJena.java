@@ -97,6 +97,7 @@ public class RdfTableMappingJena implements RdfTableMapping {
 	}
 	
 	public ResultSet executeQuery(String queryStr, String dialect) {
+//		System.out.println(queryStr);
 		Query query = QueryFactory.create(queryStr);
 		QueryExecution qe = QueryExecutionFactory.create(query, mapping);
 		this.dialect = dialect;
