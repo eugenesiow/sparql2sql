@@ -8,6 +8,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.apache.commons.lang3.NotImplementedException;
 import org.apache.jena.graph.Node;
@@ -547,10 +549,13 @@ public class SparqlOpVisitor implements OpVisitor {
 					} else {
 						AddNamedGraphSelect(namedGraph,selectAddition);
 						if(selectAddition.contains("AS")) {
-							selectClause += selectAddition.split("AS")[1];
+							String tableName = selectAddition.split("AS")[0].split("\\.")[0].trim(); //get the 'tablename' the front part before the dot
+							String newAlias = selectAddition.split("AS")[1].trim();
+							selectClause += tableName + "." + newAlias.toUpperCase() + " AS " + newAlias; //weird but the renamed alias from SQL throws an error if its not capitalised
 						}
 //						count--;
 					}
+					
 				} else {
 //					System.out.println(var.getName() + ":" + selectAddition + ":" + preventDuplicates.get(var.getName()));
 					String former = preventDuplicates.get(var.getName());
@@ -566,28 +571,42 @@ public class SparqlOpVisitor implements OpVisitor {
 			
 			if(dialect.equals("ESPER")) {
 				//for streams, build static sql froms
-				Map<String,String> aliasReplace = new HashMap<String,String>();
+//				Map<String,String> aliasReplace = new HashMap<String,String>();
 				for(Entry<String,Set<String>> selects:namedGraphSelect.entrySet()) {
 					String namedGraph = selects.getKey();
 					String localSelectClause = "SELECT ";
+					String localFromClause = "FROM "+namedGraph;
 					String sep = "";
 					for(String vars:selects.getValue()) {
 						if(vars.contains("AS")) {
 							String[] aliasParts = vars.split("AS");
-							aliasReplace.put(aliasParts[0].trim(), aliasParts[1].trim());
+//							aliasReplace.put(aliasParts[0].trim(), aliasParts[1].trim());
 						}
 						localSelectClause += sep + vars ;
 						sep = " , ";
 					}
 	//				localSelectClause = trimComma(localSelectClause);
-					tableToSyntax.put(namedGraph, "[ '"+localSelectClause+"' ]");
+					//modify where clause for esper
+					String whereAdd = "";
+					String havingAdd = "";
+					if(!whereClause.trim().equals("WHERE")) {
+						whereAdd = esperifyWhere(namedGraph,whereClause);
+						whereClause = "WHERE ";
+					}
+					if(!havingClause.trim().equals("HAVING")) {
+						havingAdd = esperifyWhere(namedGraph,havingClause);
+						havingClause = "WHERE ";
+					}
+					
+					tableToSyntax.put(namedGraph, "[ '"+localSelectClause+" " +localFromClause+" "+whereAdd+" "+havingAdd+"' ] AS "+namedGraph);
+					
 				}
 				
-				//fix aliases in where and having		
-				for(Entry<String,String> aliasPair:aliasReplace.entrySet()) {
-					whereClause = whereClause.replaceAll(aliasPair.getKey(), aliasPair.getValue());
-					havingClause = havingClause.replaceAll(aliasPair.getKey(), aliasPair.getValue());
-				}
+//				//fix aliases in where and having		
+//				for(Entry<String,String> aliasPair:aliasReplace.entrySet()) {
+//					whereClause = whereClause.replaceAll(aliasPair.getKey(), aliasPair.getValue());
+//					havingClause = havingClause.replaceAll(aliasPair.getKey(), aliasPair.getValue());
+//				}
 			}
 			
 			count = 0; //add from tables
@@ -598,7 +617,7 @@ public class SparqlOpVisitor implements OpVisitor {
 				if(tableToSyntax.containsKey(table)) {
 					String additional = tableToSyntax.get(table);
 					String prefix = "";
-					if(dialect.equals("ESPER") && additional.trim().startsWith("[") && additional.trim().endsWith("]")) {//if its an sql statement 
+					if(dialect.equals("ESPER") && additional.trim().startsWith("[")) {//if its an sql statement 
 						prefix = "sql:";
 						additional = " " + additional;
 					}	
@@ -674,6 +693,17 @@ public class SparqlOpVisitor implements OpVisitor {
 		havingClause = "HAVING ";
 		
 		bgpStarted = false;
+	}
+
+	private String esperifyWhere(String namedGraph, String whereClause) {
+		Pattern p = Pattern.compile("([a-zA-Z_$][a-zA-Z_$0-9]*)\\.([a-zA-Z_$][a-zA-Z_$0-9]*)"); //match all tablename.columnname variables in clause
+		Matcher m = p.matcher(whereClause);
+		while(m.find()) {
+			if(!m.group(1).equals(namedGraph)) {
+				whereClause = whereClause.replaceAll(m.group(0), "\\${"+m.group(2)+"}");
+			}
+		}
+		return whereClause;
 	}
 
 	private void AddNamedGraphSelect(String namedGraph, String selectAddition) {
