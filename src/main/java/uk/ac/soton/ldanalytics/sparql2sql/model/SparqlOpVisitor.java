@@ -72,6 +72,7 @@ public class SparqlOpVisitor implements OpVisitor {
 	List<List<String>> filterList = new ArrayList<List<String>>();
 	List<String> unionList = new ArrayList<String>();
 	List<Boolean> hasResults = new ArrayList<Boolean>();
+	Map<String,Integer> joinMap = new HashMap<String,Integer>();
 	Map<String,String> uriToSyntax = new HashMap<String,String>();	
 	Map<String,String> tableToSyntax = new HashMap<String,String>();
 	List<Set<String>> groupLists = new ArrayList<Set<String>>();
@@ -383,8 +384,43 @@ public class SparqlOpVisitor implements OpVisitor {
 	public void visit(OpJoin arg0) {
 		// TODO fix join
 		// TODO possibly to join the varMappings in join instead of passing all up to project
-//		System.out.println(varMappings);
+		
+		//add join conditions when same var across mappings
+		Map<String,String> allVars = new HashMap<String,String>();
+		int count = 0;
+		for(Map<String,String> varMapping:varMappings) {
+			for(Entry<String,String> varPair:varMapping.entrySet()) {
+				String term = "";
+				String thisValue = varPair.getValue();
+				String allVarVal = allVars.get(varPair.getKey());
+				if(allVarVal!=null) {
+					term =  ProcessIriMap(allVarVal,thisValue) + "=";
+					thisValue = ProcessIriMap(thisValue,allVarVal);
+					joinMap.put(term+thisValue,count);
+				}
+				term += thisValue;	
+				allVars.put(varPair.getKey(), term);
+			}
+			count++;
+		}
 		filterList.clear();
+	}
+
+	private String ProcessIriMap(String mainVal, String refVal) {
+		Pattern p = Pattern.compile("\\(\\'(.+)\\'\\|\\|(.+)\\)"); //match ('IRI'||BINDING) format
+		if(mainVal.startsWith("(")) {
+			Matcher m = p.matcher(mainVal);
+			if(m.find()) {
+				return m.group(2);
+			}			
+		}
+		if(refVal.startsWith("(")) {
+			Matcher m = p.matcher(refVal);
+			if(m.find()) {
+				return mainVal.replaceAll(m.group(1), "");
+			}
+		}
+		return mainVal;
 	}
 
 	public void visit(OpLeftJoin arg0) {
@@ -548,12 +584,9 @@ public class SparqlOpVisitor implements OpVisitor {
 					if(namedGraph==null) {
 						selectClause += selectAddition;
 					} else {
-						AddNamedGraphSelect(namedGraph,selectAddition);
-						if(selectAddition.contains("AS")) {
-							String tableName = selectAddition.split("AS")[0].split("\\.")[0].trim(); //get the 'tablename' the front part before the dot
-							String newAlias = selectAddition.split("AS")[1].trim();
-							selectClause += tableName + "." + newAlias.toUpperCase() + " AS " + newAlias; //weird but the renamed alias from SQL throws an error if its not capitalised
-						}
+						if(dialect.equals("ESPER") && !selectAddition.equals(var.getName()))
+							AddNamedGraphSelect(namedGraph,selectAddition);
+						selectClause += parseAsParts(selectAddition);
 //						count--;
 					}
 					
@@ -561,8 +594,15 @@ public class SparqlOpVisitor implements OpVisitor {
 //					System.out.println(var.getName() + ":" + selectAddition + ":" + preventDuplicates.get(var.getName()));
 					String former = preventDuplicates.get(var.getName());
 					String latter = selectAddition;
-					if(former.length()<latter.length()) //TODO: this is a temp fix when two graphs are joined and we need the already processed selected elements to be propogated
+					if(former.length()<latter.length()) { //TODO: this is a temp fix when two graphs are joined and we need the already processed selected elements to be propogated
 						selectClause = selectClause.replace(former, latter);
+						if(namedGraph!=null) {
+							AddNamedGraphSelect(namedGraph,latter);
+							if(!selectClause.trim().endsWith(","))
+								selectClause += ",";
+							selectClause += parseAsParts(latter);
+						}
+					}
 				}
 				preventDuplicates.put(var.getName(),selectAddition);
 				
@@ -599,7 +639,47 @@ public class SparqlOpVisitor implements OpVisitor {
 						havingClause = "WHERE ";
 					}
 					
-					tableToSyntax.put(namedGraph, "[ '"+localSelectClause+" " +localFromClause+" "+whereAdd+" "+havingAdd+"' ] AS "+namedGraph);
+					//modify where clause for esper from joinmap
+					for(Entry<String,Integer> joinPair:joinMap.entrySet()) {
+						if(joinPair.getValue()==varMappingCount) {
+							String wherePart = joinPair.getKey();
+							if(wherePart.contains(namedGraph + ".")) {// checking clause is part of namedGraph
+								if(whereAdd.equals("")) {
+									whereAdd = "WHERE ";
+								} else {
+									whereAdd += " AND ";
+								}
+								whereAdd += wherePart; 
+							}
+						}
+					}
+					
+					String tableStr = "[ '"+localSelectClause+" " +localFromClause+" "+FormatUtil.encodeStr(whereAdd,"ESPER_SQL")+" "+havingAdd+"' ] AS "+namedGraph;
+//					System.out.println(varMappingCount + tableStr);
+					String former = tableToSyntax.get(namedGraph);
+					if(former!=null) {
+						if(!former.equals(tableStr)) {
+							Pattern p = Pattern.compile("\\'(.+)\\'"); //match all tablename.columnname variables in clause
+							Matcher mFormer = p.matcher(former);
+							Matcher mTableStr = p.matcher(tableStr);
+							if(mFormer.find()) {
+								if(mTableStr.find()) {
+									String[] formerParts = mFormer.group(1).split("WHERE");//strip where
+									if(formerParts.length>1) { //combine them
+										String newtableStr = mTableStr.group(1);
+										if(newtableStr.contains("WHERE")) {
+											newtableStr = newtableStr.trim() + " AND ";
+										} else {
+											newtableStr = newtableStr.trim() + " WHERE ";
+										}
+										tableStr = tableStr.replace(mTableStr.group(1), newtableStr + formerParts[1].trim());
+									}
+								}
+							}
+						}
+					}
+					tableToSyntax.put(namedGraph, tableStr);
+					
 					
 				}
 				
@@ -609,25 +689,6 @@ public class SparqlOpVisitor implements OpVisitor {
 //					havingClause = havingClause.replaceAll(aliasPair.getKey(), aliasPair.getValue());
 //				}
 			}
-			
-			count = 0; //add from tables
-			for(String table:tableList) {
-				if(count++>0) {
-					fromClause += " , ";
-				}
-				if(tableToSyntax.containsKey(table)) {
-					String additional = tableToSyntax.get(table);
-					String prefix = "";
-					if(dialect.equals("ESPER") && additional.trim().startsWith("[")) {//if its an sql statement 
-						prefix = "sql:";
-						additional = " " + additional;
-					}	
-					fromClause += prefix + table + additional;
-				} else {
-					fromClause += table;
-				}
-			}
-			tableList.clear();
 			
 			//has union
 			if(!unionList.isEmpty()) {
@@ -654,6 +715,25 @@ public class SparqlOpVisitor implements OpVisitor {
 			varMappings.set(index, varMapping);
 			index++;
 		}
+		
+		int count = 0; //add from tables
+		for(String table:tableList) {
+			if(count++>0) {
+				fromClause += " , ";
+			}
+			if(tableToSyntax.containsKey(table)) {
+				String additional = tableToSyntax.get(table);
+				String prefix = "";
+				if(dialect.equals("ESPER") && additional.trim().startsWith("[")) {//if its an sql statement 
+					prefix = "sql:";
+					additional = " " + additional;
+				}	
+				fromClause += prefix + table + additional;
+			} else {
+				fromClause += table;
+			}
+		}
+		tableList.clear();
 		
 		String unionStr = "";
 		for(String unionPart:unionSelects) {
@@ -694,6 +774,16 @@ public class SparqlOpVisitor implements OpVisitor {
 		havingClause = "HAVING ";
 		
 		bgpStarted = false;
+	}
+
+	private String parseAsParts(String selectAddition) {
+		String addPart = "";
+		if(selectAddition.contains("AS")) {
+			String tableName = selectAddition.split("AS")[0].split("\\.")[0].trim(); //get the 'tablename' the front part before the dot
+			String newAlias = selectAddition.split("AS")[1].trim();
+			addPart = tableName + "." + newAlias.toUpperCase() + " AS " + newAlias; //weird but the renamed alias from SQL throws an error if its not capitalised
+		}
+		return addPart;
 	}
 
 	private String esperifyWhere(String namedGraph, String whereClause) {

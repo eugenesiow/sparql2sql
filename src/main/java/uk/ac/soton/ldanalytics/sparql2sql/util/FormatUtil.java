@@ -249,6 +249,13 @@ public class FormatUtil {
 			return true;
 		return false;
 	}
+
+	public static String encodeStr(String str, String type) {
+		if(type.equals("ESPER_SQL")) {
+			str = str.replaceAll("'", "\'");
+		}
+		return str;
+	}
 	
 	
 }
