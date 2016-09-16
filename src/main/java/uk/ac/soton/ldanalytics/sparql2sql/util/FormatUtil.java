@@ -252,7 +252,7 @@ public class FormatUtil {
 
 	public static String encodeStr(String str, String type) {
 		if(type.equals("ESPER_SQL")) {
-			str = str.replaceAll("'", "\'");
+			str = str.replaceAll("\\'", "\\\\'");
 		}
 		return str;
 	}

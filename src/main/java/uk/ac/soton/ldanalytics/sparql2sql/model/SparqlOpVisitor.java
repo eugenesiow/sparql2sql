@@ -80,6 +80,7 @@ public class SparqlOpVisitor implements OpVisitor {
 	Map<String,RdfTableMapping> mappingCatalog = new HashMap<String,RdfTableMapping>();
 	Map<String,String> namedGraphVars = new HashMap<String,String>();
 	Map<String,Set<String>> namedGraphSelect = new HashMap<String,Set<String>>();
+	Map<String,String> externalAliases = new HashMap<String,String>();
 	String currentQueryStr = null;
 	int globalVarMappingCount = -1;
 	
@@ -556,7 +557,8 @@ public class SparqlOpVisitor implements OpVisitor {
 				}
 //				System.out.println(var + ":" + selectClause + ":" + varMapping);
 				if(count++>0) {
-					selectClause += " , ";
+					if(!selectClause.trim().equals("SELECT"))
+						selectClause += " , ";
 	//				projections += " , ";
 				}
 				String selectAddition = "";
@@ -726,7 +728,7 @@ public class SparqlOpVisitor implements OpVisitor {
 				String prefix = "";
 				if(dialect.equals("ESPER") && additional.trim().startsWith("[")) {//if its an sql statement 
 					prefix = "sql:";
-					additional = " " + additional;
+					additional = " " + fixExternalTables(additional);
 				}	
 				fromClause += prefix + table + additional;
 			} else {
@@ -776,12 +778,29 @@ public class SparqlOpVisitor implements OpVisitor {
 		bgpStarted = false;
 	}
 
+	private String fixExternalTables(String additional) {
+		String[] addSplit = additional.split("] AS"); //check which table this additional belongs to
+		if(addSplit.length>1) {
+			String currentTable = addSplit[1].trim();
+			for(Entry<String,String> alias:externalAliases.entrySet()) {
+				String aliasTable = alias.getKey().split("\\.")[0];
+				if(!currentTable.equals(aliasTable)) {
+					additional = additional.replaceAll(alias.getKey(), "\\$\\{"+alias.getValue()+"\\}");
+				}
+			}
+		}
+		return additional;
+	}
+
 	private String parseAsParts(String selectAddition) {
 		String addPart = "";
 		if(selectAddition.contains("AS")) {
-			String tableName = selectAddition.split("AS")[0].split("\\.")[0].trim(); //get the 'tablename' the front part before the dot
-			String newAlias = selectAddition.split("AS")[1].trim();
+			String[] asParts = selectAddition.split("AS");
+			String[] origParts = asParts[0].split("\\.");
+			String tableName = origParts[0].trim(); //get the 'tablename' the front part before the dot
+			String newAlias = asParts[1].trim();
 			addPart = tableName + "." + newAlias.toUpperCase() + " AS " + newAlias; //weird but the renamed alias from SQL throws an error if its not capitalised
+			externalAliases.put(tableName + "." + origParts[1].trim(), tableName + "." + newAlias.toUpperCase().trim());
 		}
 		return addPart;
 	}
@@ -791,7 +810,11 @@ public class SparqlOpVisitor implements OpVisitor {
 		Matcher m = p.matcher(whereClause);
 		while(m.find()) {
 			if(!m.group(1).equals(namedGraph)) {
-				whereClause = whereClause.replaceAll(m.group(0), "\\${"+m.group(2)+"}");
+				if(tableList.contains(m.group(1))) {
+					String val = externalAliases.get(m.group(0));
+					if(val==null) 
+						externalAliases.put(m.group(0), m.group(0));
+				}
 			}
 		}
 		return whereClause;
