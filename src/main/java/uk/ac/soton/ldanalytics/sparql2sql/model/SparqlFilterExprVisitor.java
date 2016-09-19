@@ -1,6 +1,7 @@
 package uk.ac.soton.ldanalytics.sparql2sql.model;
 
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -33,13 +34,14 @@ public class SparqlFilterExprVisitor implements ExprVisitor {
 	private List<Map<String, String>> varMappings;
 	String combinePart = "";
 	private Map<String, String> varMapping;
+	Map<String,String> filterVarMapping = new HashMap<String,String>();
 
 	public void finishVisit() {
 		int counter = 0;
 		for(String exprPart:exprParts) {
 			expression += exprPart;
 			if(++counter<exprParts.size()) {
-				 expression += combinePart;
+				expression += combinePart;
 			}
 		} 
 		counter = 0;
@@ -73,15 +75,23 @@ public class SparqlFilterExprVisitor implements ExprVisitor {
 	public void visit(ExprFunction2 args) {
 		if(functionList.contains(args.getOpName())) {
 //			System.out.println(args);
-			Expr leftSide = args.getArg1();
-			Expr rightSide = args.getArg2();
-			currentPart = FormatUtil.handleExpr(leftSide,varMapping) + args.getOpName() + FormatUtil.handleExpr(rightSide, varMapping);
-			if(FormatUtil.isAggVar(leftSide)) {
-				havingParts.add(currentPart);
+			if(filterVarMapping.containsKey(args.toString())) {
+				exprParts.add(filterVarMapping.get(args.toString()));
 			} else {
-				exprParts.add(currentPart);
+				Expr leftSide = args.getArg1();
+				Expr rightSide = args.getArg2();
+				String orgArg = leftSide + args.getOpName() + rightSide;
+				currentPart = FormatUtil.handleExpr(leftSide,varMapping) + args.getOpName() + FormatUtil.handleExpr(rightSide, varMapping);
+				if(!currentPart.equals(orgArg)) {
+					filterVarMapping.put(args.toString(), currentPart);
+				}
+				if(FormatUtil.isAggVar(leftSide)) {
+					havingParts.add(currentPart);
+				} else {
+					exprParts.add(currentPart);
+				}
+				currentPart = "";
 			}
-			currentPart = "";
 		} else if(arithmeticList.contains(args.getOpName())) {
 			Expr leftSide = args.getArg1();
 			Expr rightSide = args.getArg2();
@@ -120,6 +130,10 @@ public class SparqlFilterExprVisitor implements ExprVisitor {
 	public void visit(ExprAggregator arg0) {
 		
 	}
+	
+	public Map<String,String> getFilterVarMapping() {
+		return filterVarMapping;
+	}
 
 	public void setMapping(Map<String,String> varMapping) {
 		this.varMapping = varMapping;		
@@ -127,6 +141,10 @@ public class SparqlFilterExprVisitor implements ExprVisitor {
 	
 	public void setMappings(List<Map<String,String>> varMappings) {
 		this.varMappings = varMappings;
+	}
+
+	public void setFilterVarMapping(Map<String, String> filterVarMapping) {
+		this.filterVarMapping.putAll(filterVarMapping);
 	}
 
 }

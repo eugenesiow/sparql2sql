@@ -276,15 +276,18 @@ public class SparqlOpVisitor implements OpVisitor {
 //		System.out.println("Filter");	
 		
 		List<String> filterStrs = new ArrayList<String>();
+		Map<String,String> filterVarMapping = new HashMap<String,String>();
 		for(Map<String,String> varMapping:varMappings) {
 			Set<String> havingList = new HashSet<String>();
 			String filterStr = "";
 			for(Expr filter:filters.getExprs().getList()) {
 				SparqlFilterExprVisitor v = new SparqlFilterExprVisitor();
+				v.setFilterVarMapping(filterVarMapping);
 				v.setMapping(varMapping);
 				v.setMappings(varMappings);
 				ExprWalker.walk(v,filter);
 				v.finishVisit();
+				filterVarMapping.putAll(v.getFilterVarMapping());
 				String modifier = "";
 				if(!v.getExpression().equals("")) {
 	//				if(!whereClause.equals("WHERE ")) {
@@ -307,6 +310,7 @@ public class SparqlOpVisitor implements OpVisitor {
 			if(havingList.size()>0)
 				havingLists.add(havingList);
 			filterStrs.add(filterStr);
+//			System.out.println(filterStr);
 		}
 		filterList.add(filterStrs);
 		
@@ -536,7 +540,9 @@ public class SparqlOpVisitor implements OpVisitor {
 		for(Map<String,String> varMapping:varMappings) {
 			//build filters
 			for(List<String> filterStrs:filterList) {
-				String filterStr = filterStrs.get(varMappingCount);
+//				String filterStr = filterStrs.get(varMappingCount);
+				//hack to take last filter str because it will possibly be the most complete from filterVarMappings
+				String filterStr = filterStrs.get(filterStrs.size()-1);
 				if(!filterStr.trim().equals("")) {
 					String modifier = "";
 					if(!whereClause.equals("WHERE ")) {
