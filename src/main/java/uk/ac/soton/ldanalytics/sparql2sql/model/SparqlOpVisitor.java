@@ -735,7 +735,11 @@ public class SparqlOpVisitor implements OpVisitor {
 				if(dialect.equals("ESPER") && additional.trim().startsWith("[")) {//if its an sql statement 
 					prefix = "sql:";
 					additional = " " + fixExternalTables(additional);
-				}	
+				} else if (dialect.equals("ESPER") && additional.startsWith("http")) {
+					table = "";
+					additional = "";
+					count--;
+				}
 				fromClause += prefix + table + additional;
 			} else {
 				fromClause += table;
