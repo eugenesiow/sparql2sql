@@ -81,6 +81,7 @@ public class SparqlOpVisitor implements OpVisitor {
 	Map<String,String> namedGraphVars = new HashMap<String,String>();
 	Map<String,Set<String>> namedGraphSelect = new HashMap<String,Set<String>>();
 	Map<String,String> externalAliases = new HashMap<String,String>();
+	List<String> namedGraphHistory = new ArrayList<String>();
 	String currentQueryStr = null;
 	int globalVarMappingCount = -1;
 	
@@ -188,11 +189,23 @@ public class SparqlOpVisitor implements OpVisitor {
 	}
 	
 	private Boolean ProcessGraphResults(ResultSet results, String graphUri) { //process results for graph static datasets
+		String newGraphUri = graphUri;
+		if(namedGraphHistory.contains(graphUri)) {
+			int count=0;
+			for(String historyUri:namedGraphHistory) {
+				if(historyUri.equals(graphUri))
+					count++;
+			}
+			newGraphUri = graphUri + count;
+			uriToSyntax.put(newGraphUri, uriToSyntax.get(graphUri) + count);
+//			System.out.println(uriToSyntax);
+		}
 		for(Result result:results.getResults()) {
 			for(String var:result.getVarMapping().keySet()) {
-				namedGraphVars.put(var,graphUri);
+				namedGraphVars.put(var,newGraphUri);
 			}
 		}
+		namedGraphHistory.add(graphUri);
 		return ProcessResults(results);		
 	}
 	
