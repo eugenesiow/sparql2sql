@@ -47,6 +47,11 @@ Benchmarking with SRBench and the Smart Home Analytics Benchmark.
 * For [sparql2stream](https://github.com/eugenesiow/sparql2stream)
 * For [CQELS](https://github.com/eugenesiow/cqels)
 
+CityBench benchmarking with the new sparql2stream RSP-QL engine.
+ 
+* [CityBench](https://github.com/eugenesiow/Benchmark) with sparql2stream
+* [CityBench Queries](https://github.com/eugenesiow/sparql2sql/wiki/CityBench)
+
 ### sparql2sql Server
 
 A Jetty-based server to provide a SPARQL endpoint with an RDBMS backend and using the sparql2sql translation engine can be found at  https://github.com/eugenesiow/sparql2sql-server.
