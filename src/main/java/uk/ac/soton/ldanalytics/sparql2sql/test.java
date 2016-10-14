@@ -357,45 +357,87 @@ public class test {
 		//                (case WHEN _4UT01.WindSpeed<1 THEN 0 
 //		WHEN _4UT01.WindSpeed<3 THEN 2 END) as windForce
 		
-		String queryStr = "PREFIX om-owl: <http://knoesis.wright.edu/ssw/ont/sensor-observation.owl#>\n" + 
-				"PREFIX weather: <http://knoesis.wright.edu/ssw/ont/weather.owl#>\n" + 
-				"PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>\n" + 
-				"PREFIX owl-time: <http://www.w3.org/2006/time#>\n" + 
-				"PREFIX wgs84_pos: <http://www.w3.org/2003/01/geo/wgs84_pos#>\n" + 
-				"\n" + 
-				"SELECT ( IF(AVG(?windSpeed) < 1,  0,\n" + 
-				"          IF(AVG(?windSpeed) < 4,  1,\n" + 
-				"           IF(AVG(?windSpeed) < 8,  2,\n" + 
-				"            IF(AVG(?windSpeed) < 13, 3,\n" + 
-				"             IF(AVG(?windSpeed) < 18, 4,\n" + 
-				"              IF(AVG(?windSpeed) < 25, 5,\n" + 
-				"               IF(AVG(?windSpeed) < 31, 6,\n" + 
-				"                IF(AVG(?windSpeed) < 39, 7,\n" + 
-				"                 IF(AVG(?windSpeed) < 47, 8,\n" + 
-				"                  IF(AVG(?windSpeed) < 55, 9,\n" + 
-				"                   IF(AVG(?windSpeed) < 64, 10,\n" + 
-				"                    IF(AVG(?windSpeed) < 73, 11, 12) )))))))))))\n" + 
-				"         AS ?windForce )\n" + 
-				"       ( AVG(?windDirection) AS ?avgWindDirection )\n" + 
-				"WHERE {\n" + 
-				"  ?sensor om-owl:generatedObservation ?o1 ;\n" + 
-				"          om-owl:generatedObservation ?o2 .\n" + 
-				"  ?sensor om-owl:processLocation ?sensorLocation .\n" + 
-				"    ?sensorLocation wgs84_pos:alt \"5350\"^^xsd:float ;\n" + 
-				"                  wgs84_pos:lat \"40.82944\"^^xsd:float ;\n" + 
-				"                  wgs84_pos:long \"-111.88222\"^^xsd:float .\n" + 
-				"  ?o1 a weather:WindDirectionObservation ;\n" + 
-				"      om-owl:observedProperty weather:_WindDirection ;\n" + 
-				"      om-owl:result [om-owl:floatValue ?windDirection] ;\n" + 
-				"      om-owl:samplingTime ?instant .\n" + 
-				"  ?o2 a weather:WindSpeedObservation ;\n" + 
-				"      om-owl:observedProperty weather:_WindSpeed ;\n" + 
-				"      om-owl:result [om-owl:floatValue ?windSpeed] ;\n" + 
-				"      om-owl:samplingTime ?instant .\n" + 
-				"  ?instant owl-time:inXSDDateTime ?time .\n" + 
-				"  FILTER (?time>\"2003-04-01T00:00:00\"^^xsd:dateTime && ?time<\"2003-04-02T00:00:00\"^^xsd:dateTime)\n" + 
-				"}\n" + 
-				"GROUP BY ?sensor";
+//		String queryStr = "PREFIX om-owl: <http://knoesis.wright.edu/ssw/ont/sensor-observation.owl#>\n" + 
+//				"PREFIX weather: <http://knoesis.wright.edu/ssw/ont/weather.owl#>\n" + 
+//				"PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>\n" + 
+//				"PREFIX owl-time: <http://www.w3.org/2006/time#>\n" + 
+//				"PREFIX wgs84_pos: <http://www.w3.org/2003/01/geo/wgs84_pos#>\n" + 
+//				"\n" + 
+//				"SELECT ( IF(AVG(?windSpeed) < 1,  0,\n" + 
+//				"          IF(AVG(?windSpeed) < 4,  1,\n" + 
+//				"           IF(AVG(?windSpeed) < 8,  2,\n" + 
+//				"            IF(AVG(?windSpeed) < 13, 3,\n" + 
+//				"             IF(AVG(?windSpeed) < 18, 4,\n" + 
+//				"              IF(AVG(?windSpeed) < 25, 5,\n" + 
+//				"               IF(AVG(?windSpeed) < 31, 6,\n" + 
+//				"                IF(AVG(?windSpeed) < 39, 7,\n" + 
+//				"                 IF(AVG(?windSpeed) < 47, 8,\n" + 
+//				"                  IF(AVG(?windSpeed) < 55, 9,\n" + 
+//				"                   IF(AVG(?windSpeed) < 64, 10,\n" + 
+//				"                    IF(AVG(?windSpeed) < 73, 11, 12) )))))))))))\n" + 
+//				"         AS ?windForce )\n" + 
+//				"       ( AVG(?windDirection) AS ?avgWindDirection )\n" + 
+//				"WHERE {\n" + 
+//				"  ?sensor om-owl:generatedObservation ?o1 ;\n" + 
+//				"          om-owl:generatedObservation ?o2 .\n" + 
+//				"  ?sensor om-owl:processLocation ?sensorLocation .\n" + 
+//				"    ?sensorLocation wgs84_pos:alt \"5350\"^^xsd:float ;\n" + 
+//				"                  wgs84_pos:lat \"40.82944\"^^xsd:float ;\n" + 
+//				"                  wgs84_pos:long \"-111.88222\"^^xsd:float .\n" + 
+//				"  ?o1 a weather:WindDirectionObservation ;\n" + 
+//				"      om-owl:observedProperty weather:_WindDirection ;\n" + 
+//				"      om-owl:result [om-owl:floatValue ?windDirection] ;\n" + 
+//				"      om-owl:samplingTime ?instant .\n" + 
+//				"  ?o2 a weather:WindSpeedObservation ;\n" + 
+//				"      om-owl:observedProperty weather:_WindSpeed ;\n" + 
+//				"      om-owl:result [om-owl:floatValue ?windSpeed] ;\n" + 
+//				"      om-owl:samplingTime ?instant .\n" + 
+//				"  ?instant owl-time:inXSDDateTime ?time .\n" + 
+//				"  FILTER (?time>\"2003-04-01T00:00:00\"^^xsd:dateTime && ?time<\"2003-04-02T00:00:00\"^^xsd:dateTime)\n" + 
+//				"}\n" + 
+//				"GROUP BY ?sensor";
+		
+		String queryStr = "PREFIX  xsd:  <http://www.w3.org/2001/XMLSchema#>\n" + 
+				"PREFIX  iotsn: <http://iot.soton.ac.uk/smarthome/sensor#>\n" + 
+				"PREFIX  time: <http://www.w3.org/2006/time#>\n" + 
+				"PREFIX  ssn:  <http://purl.oclc.org/NET/ssnx/ssn#>\n" + 
+				"PREFIX  iot:  <http://purl.oclc.org/NET/iot#>\n" + 
+				"PREFIX  rdfs: <http://www.w3.org/2000/01/rdf-schema#>\n" + 
+				"SELECT ?motiondate ?motionhours ?motionplatform ?power ?meter ?name WHERE {\n" + 
+				"  {\n" + 
+				"    SELECT (?platform as ?meterplatform) (?hours as ?meterhours) (?dateOnly as ?meterdate) (avg(?meterval) as ?power) ?meter (sample(?label) as ?name)\n" + 
+				"    WHERE\n" + 
+				"    {\n" + 
+				"      ?meter rdfs:label ?label.\n" + 
+				"      ?meter ssn:onPlatform ?platform.\n" + 
+				"      ?meterobs ssn:observedBy ?meter.\n" + 
+				"      ?meterobs ssn:observationSamplingTime ?meterinstant;\n" + 
+				"        ssn:observationResult ?metersnout.\n" + 
+				"      ?meterinstant time:inXSDDateTime ?date.\n" + 
+				"      ?metersnout ssn:hasValue ?meterobsval.\n" + 
+				"      ?meterobsval a iot:EnergyValue.\n" + 
+				"      ?meterobsval iot:hasQuantityValue ?meterval.\n" + 
+				"      FILTER(?meterval > 0)\n" + 
+				"      FILTER (?date > \"2012-07-05T00:00:00\"^^xsd:dateTime && ?date < \"2012-07-06T00:00:00\"^^xsd:dateTime)\n" + 
+				"    } GROUP BY ?platform (hours(?date) as ?hours) (xsd:date(?date) as ?dateOnly) ?meter\n" + 
+				"  }\n" + 
+				"  {\n" + 
+				"    SELECT (sum(?motionOrNot) as ?isMotion) (?platform as ?motionplatform) (?hours as ?motionhours) (?dateOnly as ?motiondate)\n" + 
+				"    WHERE\n" + 
+				"    {\n" + 
+				"      ?obsval a iot:MotionValue;\n" + 
+				"        iot:hasQuantityValue ?motionOrNot.\n" + 
+				"      ?snout ssn:hasValue ?obsval.\n" + 
+				"      ?obs ssn:observationSamplingTime ?instant;\n" + 
+				"        ssn:observationResult ?snout.\n" + 
+				"      ?instant time:inXSDDateTime ?date.\n" + 
+				"      ?obs ssn:observedBy ?sensor.\n" + 
+				"      ?sensor ssn:onPlatform ?platform.\n" + 
+				"      FILTER (?date > \"2012-07-05T00:00:00\"^^xsd:dateTime && ?date < \"2012-07-06T00:00:00\"^^xsd:dateTime)\n" + 
+				"    } GROUP BY ?platform (hours(?date) as ?hours) (xsd:date(?date) as ?dateOnly)\n" + 
+				"  }\n" + 
+				"  FILTER(?motionplatform = ?meterplatform && ?motionhours = ?meterhours && ?motiondate = ?meterdate && ?isMotion=0)\n" + 
+				"}";
 		
 //		String queryStr = "PREFIX om-owl: <http://knoesis.wright.edu/ssw/ont/sensor-observation.owl#>\n" + 
 //				"PREFIX weather: <http://knoesis.wright.edu/ssw/ont/weather.owl#>\n" + 
@@ -458,12 +500,12 @@ public class test {
 		
 //		RdfTableMapping mapping = new RdfTableMappingSesame();
 		RdfTableMapping mapping = new RdfTableMappingJena();
-		mapping.loadMapping("mapping/4UT01.nt");
+//		mapping.loadMapping("mapping/4UT01.nt");
 //		mapping.loadMapping("/Users/eugene/Downloads/knoesis_observations_map_snow_meta/AROC2.nt");
-//		mapping.loadMapping("mapping/smarthome_environment.nt");
-//		mapping.loadMapping("mapping/smarthome_sensors.nt");
-//		mapping.loadMapping("mapping/smarthome_meter.nt");
-//		mapping.loadMapping("mapping/smarthome_motion.nt");
+		mapping.loadMapping("mapping/smarthome_environment.nt");
+		mapping.loadMapping("mapping/smarthome_sensors.nt");
+		mapping.loadMapping("mapping/smarthome_meter.nt");
+		mapping.loadMapping("mapping/smarthome_motion.nt");
 		
 		
 //		System.out.println(queryStr);
