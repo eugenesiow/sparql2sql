@@ -295,6 +295,7 @@ public class SparqlOpVisitor implements OpVisitor {
 			String filterStr = "";
 			for(Expr filter:filters.getExprs().getList()) {
 				SparqlFilterExprVisitor v = new SparqlFilterExprVisitor();
+				v.setDialect(dialect);
 				v.setFilterVarMapping(filterVarMapping);
 				v.setMapping(varMapping);
 				v.setMappings(varMappings);

@@ -100,7 +100,7 @@ public class FormatUtil {
 		if(varMapping.containsKey(varName)) {
 			mappedName = varMapping.get(varName);
 		} else {
-			mappedName = "?"+varName;
+			mappedName = "?"+varName;	
 		}
 		return mappedName;
 	}
@@ -124,9 +124,12 @@ public class FormatUtil {
 		return cols;
 	}
 
-	public static String handleExpr(Expr expr, Map<String, String> varMapping) {
-		if(expr.isVariable()) {
-			return FormatUtil.mapVar(expr.getVarName(),varMapping);
+	public static String handleExpr(Expr expr, Map<String, String> varMapping, String dialect) {
+		if(expr.isVariable()) {				
+			String newVar = FormatUtil.mapVar(expr.getVarName(),varMapping);
+			if(!dialect.equals("ESPER"))
+				newVar = newVar.replace("?", "");
+			return newVar; 
 		} else if(expr.isConstant()) {
 			return parseNodeValue(expr.getConstant());
 		} else if(expr.isFunction()) {
@@ -135,10 +138,10 @@ public class FormatUtil {
 		return expr.toString();
 	}
 	
-	public static String handleExpr(Expr expr, List<Map<String, String>> varMappings) { //if multiple var mappings
+	public static String handleExpr(Expr expr, List<Map<String, String>> varMappings, String dialect) { //if multiple var mappings
 		String expression = "";
 		for(Map<String, String> varMapping:varMappings) {
-			String newExpr = handleExpr(expr,varMapping);
+			String newExpr = handleExpr(expr,varMapping, dialect);
 			if(!expr.toString().equals(newExpr)) { //if its not equals it must be mapped, so return the result of the mapping
 				return newExpr;
 			} else {

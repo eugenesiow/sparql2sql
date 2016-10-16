@@ -33,6 +33,7 @@ public class SparqlFilterExprVisitor implements ExprVisitor {
 	List<String> arithmeticList = Arrays.asList(aList);
 	private List<Map<String, String>> varMappings;
 	String combinePart = "";
+	String dialect = "";
 	private Map<String, String> varMapping;
 	Map<String,String> filterVarMapping = new HashMap<String,String>();
 
@@ -71,6 +72,10 @@ public class SparqlFilterExprVisitor implements ExprVisitor {
 
 	public void visit(ExprFunction1 arg0) {
 	}
+	
+	public void setDialect(String dialect) {
+		this.dialect = dialect;
+	}
 
 	public void visit(ExprFunction2 args) {
 		if(functionList.contains(args.getOpName())) {
@@ -81,7 +86,10 @@ public class SparqlFilterExprVisitor implements ExprVisitor {
 				Expr leftSide = args.getArg1();
 				Expr rightSide = args.getArg2();
 				String orgArg = leftSide + args.getOpName() + rightSide;
-				currentPart = FormatUtil.handleExpr(leftSide,varMapping) + args.getOpName() + FormatUtil.handleExpr(rightSide, varMapping);
+				//TODO: check the mappings across cases
+				for(Map<String,String> varMapping:varMappings) {
+					currentPart = FormatUtil.handleExpr(leftSide,varMapping,dialect) + args.getOpName() + FormatUtil.handleExpr(rightSide, varMapping,dialect);
+				}
 				if(!currentPart.equals(orgArg)) {
 					filterVarMapping.put(args.toString(), currentPart);
 				}
@@ -95,7 +103,7 @@ public class SparqlFilterExprVisitor implements ExprVisitor {
 		} else if(arithmeticList.contains(args.getOpName())) {
 			Expr leftSide = args.getArg1();
 			Expr rightSide = args.getArg2();
-			currentPart = FormatUtil.handleExpr(leftSide,varMappings) + args.getOpName() + FormatUtil.handleExpr(rightSide, varMappings);
+			currentPart = FormatUtil.handleExpr(leftSide,varMappings,dialect) + args.getOpName() + FormatUtil.handleExpr(rightSide, varMappings,dialect);
 			varMapping.put(args.toString(), currentPart);
 //			System.out.println(varMapping);
 //			System.out.println(currentPart);

@@ -413,13 +413,13 @@ public class test {
 				"      ?meterobs ssn:observedBy ?meter.\n" + 
 				"      ?meterobs ssn:observationSamplingTime ?meterinstant;\n" + 
 				"        ssn:observationResult ?metersnout.\n" + 
-				"      ?meterinstant time:inXSDDateTime ?date.\n" + 
+				"      ?meterinstant time:inXSDDateTime ?date1.\n" + 
 				"      ?metersnout ssn:hasValue ?meterobsval.\n" + 
 				"      ?meterobsval a iot:EnergyValue.\n" + 
 				"      ?meterobsval iot:hasQuantityValue ?meterval.\n" + 
 				"      FILTER(?meterval > 0)\n" + 
-				"      FILTER (?date > \"2012-07-05T00:00:00\"^^xsd:dateTime && ?date < \"2012-07-06T00:00:00\"^^xsd:dateTime)\n" + 
-				"    } GROUP BY ?platform (hours(?date) as ?hours) (xsd:date(?date) as ?dateOnly) ?meter\n" + 
+				"      FILTER (?date1 > \"2012-07-05T00:00:00\"^^xsd:dateTime && ?date1 < \"2012-07-06T00:00:00\"^^xsd:dateTime)\n" + 
+				"    } GROUP BY ?platform (hours(?date1) as ?hours) (xsd:date(?date1) as ?dateOnly) ?meter\n" + 
 				"  }\n" + 
 				"  {\n" + 
 				"    SELECT (sum(?motionOrNot) as ?isMotion) (?platform as ?motionplatform) (?hours as ?motionhours) (?dateOnly as ?motiondate)\n" + 
